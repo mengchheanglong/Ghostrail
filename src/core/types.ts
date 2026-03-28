@@ -22,4 +22,6 @@ export interface StoredIntentPack extends IntentPack {
   repositoryContext?: string;
   notes?: string;
   tags?: string[];
+  starred?: boolean;
+  archived?: boolean;
 }

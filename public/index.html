@@ -391,6 +391,48 @@
         color: #9ca3af;
         opacity: 0.7;
       }
+
+      /* ── Star and archive controls ── */
+      .btn-star {
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.3) !important;
+      }
+      .btn-archive {
+        color: #9ca3af;
+        border-color: rgba(156, 163, 175, 0.2) !important;
+      }
+      .star-indicator {
+        color: #fbbf24;
+        font-size: 0.78rem;
+      }
+      .archived-indicator {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        background: rgba(156, 163, 175, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .pack-item-archived {
+        opacity: 0.45;
+      }
+      .show-archived-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0 2px;
+        font-size: 0.8rem;
+        color: #9ca3af;
+        cursor: pointer;
+        user-select: none;
+      }
+      .show-archived-row input[type="checkbox"] {
+        cursor: pointer;
+        accent-color: #6366f1;
+        width: auto;
+        margin: 0;
+        padding: 0;
+        border: none;
+      }
     </style>
   </head>
   <body>
@@ -417,6 +459,10 @@
           <div class="card" style="margin-top:0">
             <h2>Saved Packs</h2>
             <input type="search" id="packSearch" class="pack-search" placeholder="Filter packs…" />
+            <label class="show-archived-row">
+              <input type="checkbox" id="showArchivedToggle" />
+              Show archived
+            </label>
             <div id="packListState" class="state-msg">Loading…</div>
             <ul id="packList" class="pack-list" style="display:none"></ul>
           </div>
@@ -429,6 +475,8 @@
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
               <button id="rerunBtn" class="btn-rerun" disabled>Re-run from this pack</button>
               <button id="duplicateBtn" class="btn-duplicate" disabled>Duplicate pack</button>
+              <button id="starBtn" class="btn-star" disabled>☆ Star</button>
+              <button id="archiveBtn" class="btn-archive" disabled>Archive</button>
               <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
               <button id="cancelDeleteBtn" class="btn-cancel" style="display:none">Cancel</button>
               <span id="exportStatus" class="export-status"></span>
@@ -519,6 +567,9 @@
       const deleteBtn      = document.getElementById("deleteBtn");
       const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
+      const showArchivedToggle = document.getElementById("showArchivedToggle");
+      const starBtn        = document.getElementById("starBtn");
+      const archiveBtn     = document.getElementById("archiveBtn");
       const goalSection    = document.getElementById("goalSection");
       const goalDisplay    = document.getElementById("goalDisplay");
       const goalEditor     = document.getElementById("goalEditor");
@@ -553,6 +604,7 @@
       let selectedPack = null;
       let allPacks     = [];
       let pendingDelete = false;
+      let showArchived  = false;
 
       const GOAL_PREVIEW_MAX_LEN = 60;
 
@@ -562,6 +614,11 @@
       function updateRerunBtn(pack) {
         rerunBtn.disabled = !pack.goal;
         rerunBtn.title = pack.goal ? "" : "No original goal stored for this pack";
+      }
+
+      function updateCurationBtns(pack) {
+        starBtn.textContent = pack.starred ? "★ Unstar" : "☆ Star";
+        archiveBtn.textContent = pack.archived ? "Unarchive" : "Archive";
       }
 
       function formatDate(iso) {
@@ -591,8 +648,9 @@
       // ── Client-side filter ────────────────────────────────────
       function getFilteredPacks() {
         const q = packSearch.value.trim().toLowerCase();
-        if (!q) return allPacks;
         return allPacks.filter(p => {
+          if (p.archived && !showArchived) return false;
+          if (!q) return true;
           if (p.goal && p.goal.toLowerCase().includes(q)) return true;
           if (p.objective.toLowerCase().includes(q)) return true;
           if (Array.isArray(p.touchedAreas) && p.touchedAreas.some(a => a.toLowerCase().includes(q))) return true;
@@ -622,7 +680,7 @@
 
         for (const pack of packs) {
           const li = document.createElement("li");
-          li.className = "pack-item" + (pack.id === selectedId ? " selected" : "");
+          li.className = "pack-item" + (pack.id === selectedId ? " selected" : "") + (pack.archived ? " pack-item-archived" : "");
           li.dataset.id = pack.id;
 
           const safeConfidence = CONFIDENCE_VALUES.includes(pack.confidence) ? pack.confidence : "low";
@@ -636,6 +694,8 @@
               <span class="${confidenceClass}">${escapeHtml(pack.confidence)}</span>
               <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
               ${pack.notes ? `<span class="note-indicator">✎</span>` : ""}
+              ${pack.starred ? `<span class="star-indicator">★</span>` : ""}
+              ${pack.archived ? `<span class="archived-indicator">archived</span>` : ""}
             </div>
             ${Array.isArray(pack.tags) && pack.tags.length > 0
               ? `<div class="pack-item-tags">${pack.tags.map(t => `<span class="badge badge-tag">${escapeHtml(t)}</span>`).join("")}</div>`
@@ -724,9 +784,12 @@
         exportBtn.disabled = false;
         updateRerunBtn(pack);
         duplicateBtn.disabled = false;
+        starBtn.disabled = false;
+        archiveBtn.disabled = false;
         deleteBtn.disabled = false;
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
+        updateCurationBtns(pack);
 
         detailCard.style.display = "";
         detailContent.innerHTML = `
@@ -775,6 +838,10 @@
         rerunBtn.disabled  = true;
         rerunBtn.title     = "";
         duplicateBtn.disabled = true;
+        starBtn.disabled = true;
+        starBtn.textContent = "☆ Star";
+        archiveBtn.disabled = true;
+        archiveBtn.textContent = "Archive";
         deleteBtn.disabled = true;
         deleteBtn.textContent = "Delete";
         cancelDeleteBtn.style.display = "none";
