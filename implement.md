@@ -23,12 +23,13 @@ Ghostrail currently supports:
 - **sidebar shows compact tag chips and note indicator**
 - **duplicate pack (POST /api/intent-packs/:id/duplicate)**
 - **notes and tags surfaced in GitHub Issue markdown export**
+- **repositoryContext surfaced in GitHub Issue markdown export**
 
 ## Current verified baseline
 - POST /api/intent-pack works
 - GET /api/intent-packs works
 - GET /api/intent-packs/:id works
-- GET /api/intent-packs/:id/export-issue works (includes notes and tags when present)
+- GET /api/intent-packs/:id/export-issue works (includes notes, tags, and repositoryContext when present)
 - POST /api/intent-pack/export-issue works
 - DELETE /api/intent-packs/:id works
 - PATCH /api/intent-packs/:id works (notes, tags, normalized)
@@ -44,8 +45,9 @@ Ghostrail currently supports:
 - draft hint shows the source pack's goal after re-run
 - GitHub Issue markdown export includes tags line when present
 - GitHub Issue markdown export includes notes section when present
+- GitHub Issue markdown export includes repositoryContext section when present
 - build passes
-- all 53 tests pass
+- all 57 tests pass
 
 ## Active stop-line
 Only take the next safe bounded slice.
@@ -68,19 +70,20 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
-- Slice: B8 — Surface notes and tags in GitHub Issue markdown export
-- Why this was the right next move: notes and tags were persisted and shown in the UI but dropped during export; completing this makes the export coherent with the saved-pack data model; single-file formatter change, low risk
+- Slice: B9 — Surface repositoryContext in GitHub Issue markdown export
+- Why this was the right next move: repositoryContext was persisted, shown in the UI, and already exported in notes/tags context — completing this closes the last visible field dropped during export; single-file formatter change, zero-risk
 - Files changed:
-  - `src/core/issueMarkdown.ts` — widened parameter to `IntentPack & { notes?: string; tags?: string[] }`; added compact `**Tags:** ...` line after Objective when tags present; added `## Notes` section before Review note when notes non-blank; no change to existing sections
-  - `src/generateIntentPack.test.ts` — imported `IntentPack` type and `basePack` helper; 5 new tests: tags present, notes present, tags absent/empty, notes absent/blank, older pack backward compat
+  - `src/core/issueMarkdown.ts` — widened parameter to include `repositoryContext?: string`; added conditional `## Repository context` section after Tags line and before Non-goals; no change to existing sections
+  - `src/generateIntentPack.test.ts` — 5 new tests: repositoryContext present, repositoryContext absent, repositoryContext blank/whitespace, older pack (no repositoryContext) with notes/tags intact, plus extended backward-compat test
 - Verification:
   - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (53/53 tests)
+  - `npm test` passes (57/57 tests)
   - CodeQL: 0 alerts
 - Result: working
-- Rollback path: revert `issueMarkdown.ts` to single-parameter version, remove 5 new tests
+- Rollback path: revert `issueMarkdown.ts` to B8 state, remove 5 new tests
 
-### Previous completed slice
+### Previous completed slice (B8)
+- Slice: B8 — Surface notes and tags in GitHub Issue markdown export
 - Slice: Saved Intent Pack organization and refinement milestone (all 6 subparts)
 - Subparts completed:
   1. Notes support — PATCH endpoint + inline editor UI + backward compat
@@ -105,13 +108,12 @@ Choose the highest-ROI task that is:
 - Rollback path: revert all 6 files to previous state
 
 ### Current recommended next slice
-- Scope: The export loop is now complete for notes and tags. Good next candidates:
+- Scope: The export formatter is now complete for all persisted fields (notes, tags, repositoryContext). Good next candidates:
   - Pack metadata editing — allow editing the goal or repositoryContext after creation (currently read-only in the detail view)
   - Browser-flow tests for notes/tags/duplicate UI interactions (requires jsdom or playwright)
-  - Export format polish — include repositoryContext in the GitHub Issue markdown when present (currently also dropped)
-- Why now: export is now coherent with saved-pack data; editing goal/repositoryContext would close the remaining read-only gap in the detail view
-- Expected files: `src/core/handler.ts` (new PATCH sub-fields or extend existing PATCH), `src/core/intentPackStore.ts`, `public/index.html` (editable goal/context fields), tests
-- Stop-line: do not redesign the pack schema; only allow editing the mutable user-supplied fields (goal, repositoryContext)
+- Why now: export is now complete; the remaining gap in the product loop is that goal/repositoryContext are read-only after creation
+- Expected files: extend PATCH handler to accept goal/repositoryContext, update `src/core/intentPackStore.ts`, add inline editors in `public/index.html`, tests
+- Stop-line: do not redesign the pack schema; only allow editing the mutable user-supplied fields
 
 ## If blocked
 If blocked, stop and write:

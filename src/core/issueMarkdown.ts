@@ -5,11 +5,16 @@ function renderList(items: string[]): string {
 }
 
 export function toGitHubIssueMarkdown(
-  pack: IntentPack & { notes?: string; tags?: string[] }
+  pack: IntentPack & { notes?: string; tags?: string[]; repositoryContext?: string }
 ): string {
   const tagsLine =
     pack.tags && pack.tags.length > 0
       ? `\n**Tags:** ${pack.tags.join(", ")}\n`
+      : "";
+
+  const repositoryContextSection =
+    pack.repositoryContext && pack.repositoryContext.trim()
+      ? `\n## Repository context\n${pack.repositoryContext.trim()}\n`
       : "";
 
   const notesSection =
@@ -21,7 +26,7 @@ export function toGitHubIssueMarkdown(
 
 ## Objective
 ${pack.objective}
-${tagsLine}
+${tagsLine}${repositoryContextSection}
 ## Non-goals
 ${renderList(pack.nonGoals)}
 

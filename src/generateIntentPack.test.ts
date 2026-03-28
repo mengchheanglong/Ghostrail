@@ -78,3 +78,26 @@ test("toGitHubIssueMarkdown exports safely for older packs without notes or tags
   assert.doesNotMatch(markdown, /## Notes/);
   assert.doesNotMatch(markdown, /\*\*Tags:\*\*/);
 });
+
+test("toGitHubIssueMarkdown includes repositoryContext when present", () => {
+  const markdown = toGitHubIssueMarkdown({ ...basePack, repositoryContext: "Node backend with auth module." });
+  assert.match(markdown, /## Repository context/);
+  assert.match(markdown, /Node backend with auth module\./);
+});
+
+test("toGitHubIssueMarkdown omits repositoryContext when absent", () => {
+  const markdown = toGitHubIssueMarkdown(basePack);
+  assert.doesNotMatch(markdown, /## Repository context/);
+});
+
+test("toGitHubIssueMarkdown omits repositoryContext when blank or whitespace-only", () => {
+  const markdown = toGitHubIssueMarkdown({ ...basePack, repositoryContext: "   " });
+  assert.doesNotMatch(markdown, /## Repository context/);
+});
+
+test("toGitHubIssueMarkdown exports older pack (no repositoryContext) with notes and tags intact", () => {
+  const markdown = toGitHubIssueMarkdown({ ...basePack, notes: "A note.", tags: ["api"] });
+  assert.doesNotMatch(markdown, /## Repository context/);
+  assert.match(markdown, /## Notes/);
+  assert.match(markdown, /\*\*Tags:\*\* api/);
+});

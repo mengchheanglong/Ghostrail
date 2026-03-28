@@ -9,12 +9,6 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-### B9 — Surface repositoryContext in GitHub Issue markdown export
-- Value: completeness — repositoryContext is saved and shown in detail view but not in the exported markdown
-- Scope: `src/core/issueMarkdown.ts` + update markdown test
-- Risk: low
-- Verification: existing markdown tests pass, new test covers repositoryContext section
-
 ### B10 — Pack metadata editing (goal and repositoryContext)
 - Value: usability — goal and repositoryContext are currently read-only in the detail view after creation
 - Scope: extend `PATCH /api/intent-packs/:id` to accept goal/repositoryContext; add inline editors in UI
@@ -47,6 +41,9 @@ Move completed items here with short completion notes.
 
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
+
+### B9 — Surface repositoryContext in GitHub Issue markdown export
+- Completed: `toGitHubIssueMarkdown` now includes a `## Repository context` section after Tags and before Non-goals when repositoryContext is present and non-blank; backward compatible; 5 new tests.
 
 ### B8 — Surface notes and tags in GitHub Issue markdown export
 - Completed: `toGitHubIssueMarkdown` now includes a compact Tags line after Objective and a Notes section before Review note when those fields are present; backward compatible; 5 new tests.
