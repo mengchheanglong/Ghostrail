@@ -4,6 +4,7 @@ import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateIntentPack } from "./core/generateIntentPack.js";
 import { toGitHubIssueMarkdown } from "./core/issueMarkdown.js";
+import { saveIntentPack, listIntentPacks, getIntentPackById } from "./core/intentPackStore.js";
 import type { IntentPackInput } from "./core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +36,8 @@ const server = createServer(async (req: any, res: any) => {
       }
 
       const pack = generateIntentPack(body);
-      return json(res, 200, pack);
+      const stored = await saveIntentPack(pack);
+      return json(res, 200, stored);
     }
 
     if (method === "POST" && url.pathname === "/api/intent-pack/export-issue") {
@@ -47,6 +49,18 @@ const server = createServer(async (req: any, res: any) => {
       const pack = generateIntentPack(body);
       const markdown = toGitHubIssueMarkdown(pack);
       return json(res, 200, { markdown, pack });
+    }
+
+    if (method === "GET" && url.pathname === "/api/intent-packs") {
+      const packs = await listIntentPacks();
+      return json(res, 200, packs);
+    }
+
+    if (method === "GET" && url.pathname.startsWith("/api/intent-packs/")) {
+      const id = url.pathname.slice("/api/intent-packs/".length);
+      const pack = await getIntentPackById(id);
+      if (!pack) return json(res, 404, { error: "not found" });
+      return json(res, 200, pack);
     }
 
     if (method === "GET" && (url.pathname === "/" || url.pathname.startsWith("/assets/"))) {
