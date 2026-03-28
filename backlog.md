@@ -9,11 +9,11 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-### B12 — Browser-flow tests for inline editors (goal, context, notes, tags)
-- Value: safety — UI editing flows have no automated coverage; manual verification only
-- Scope: add jsdom or playwright tests for the inline editor interactions
-- Risk: medium (requires adding a test dependency)
-- Verification: new test suite passes
+### B13 — Pack archiving / starring
+- Value: curation — allow users to mark a pack as starred or archived; useful when the pack list grows
+- Scope: new field on StoredIntentPack, PATCH support, sidebar indicator, optional filter toggle
+- Risk: low-medium (new field, new UI toggle, backward-compatible)
+- Verification: starred pack shows indicator; filter toggle works; older packs safe
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -41,6 +41,9 @@ Move completed items here with short completion notes.
 
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
+
+### B12 — Browser-flow tests for inline editors (goal, context, notes, tags)
+- Completed: Playwright installed (`@playwright/test` 1.58.2); `playwright.config.ts` added; `tests/browser/editing.spec.ts` added with 4 tests (edit goal, edit repositoryContext, edit notes, add/remove tag); all 4 pass in ~7.6s; 69 existing unit/integration tests unchanged; `npm run test:browser` is the new command.
 
 ### B11 — Extend search/filter to match repositoryContext
 - Completed: `getFilteredPacks()` predicate extended with one line — repositoryContext now participates in case-insensitive matching; backward-compatible (guard on `p.repositoryContext`); no server changes; 69 tests still pass.

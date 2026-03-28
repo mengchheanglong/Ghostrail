@@ -25,7 +25,7 @@ Ghostrail currently supports:
 - **notes and tags surfaced in GitHub Issue markdown export**
 - **repositoryContext surfaced in GitHub Issue markdown export**
 - **goal editing on saved packs (inline editor, PATCH on save, rejects empty)**
-- **repositoryContext editing on saved packs (inline editor, PATCH on save, blank clears field)**
+- **browser-flow tests for inline editors (Playwright, B12)**
 
 ## Current verified baseline
 - POST /api/intent-pack works
@@ -45,7 +45,7 @@ Ghostrail currently supports:
 - UI sidebar shows compact tag badges and note indicator
 - UI supports duplicate pack (POST, refreshes + selects new)
 - UI supports goal editing (inline editor, PATCH on save, empty rejected client- and server-side)
-- UI supports repositoryContext editing (inline editor, PATCH on save, blank clears field)
+- UI inline editors are covered by 4 Playwright browser-flow tests (goal, repositoryContext, notes, tags)
 - re-run button updates correctly after goal is edited
 - draft hint shows the source pack's goal after re-run
 - GitHub Issue markdown export includes tags line when present
@@ -75,6 +75,20 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
+- Slice: B12 — Browser-flow tests for inline editors (goal, repositoryContext, notes, tags)
+- Why this was the right next move: all four inline editing flows were working but only manually verified; adding Playwright tests closes the automated coverage gap; Playwright + system Chrome required no new browser download; single coherent test slice with clear verification
+- Files changed:
+  - `package.json` — added `"@playwright/test": "^1.58.2"` devDependency; added `"test:browser": "playwright test"` script
+  - `playwright.config.ts` (new) — minimal Playwright config; headless; uses system Chrome (`/usr/bin/chromium`); `--no-sandbox` for CI environments; `testDir: "tests/browser"`
+  - `tests/browser/editing.spec.ts` (new) — 4 browser-flow tests: edit goal, edit repositoryContext, edit notes, add/remove tag; each test starts a real server with a temp data dir, seeds one pack, drives the UI via Playwright, asserts the updated display value
+- Verification:
+  - `npm run build` passes (TypeScript, zero errors)
+  - `npm test` passes (69/69 tests; unchanged)
+  - `npm run test:browser` passes (4/4 browser-flow tests; ~7.6s)
+- Result: working
+- Rollback path: remove `playwright.config.ts`, `tests/browser/editing.spec.ts`, revert `package.json` to remove devDependency and script
+
+### Previous completed slice (B11)
 - Slice: B11 — Extend search/filter to match repositoryContext
 - Why this was the right next move: repositoryContext was the only persisted, visible, and editable field that was still absent from the client-side filter predicate; one-line addition, zero server impact, zero risk, completes the consistency gap
 - Files changed:
@@ -140,10 +154,10 @@ Choose the highest-ROI task that is:
 - Rollback path: revert all 6 files to previous state
 
 ### Current recommended next slice
-- Scope: B11 is now complete — all persisted pack fields (goal, repositoryContext, notes, tags) are now searchable. Good next candidates:
-  - Browser-flow tests for inline editors (B12) — goal/context/notes/tags editing flows have no automated coverage; requires jsdom or playwright
+- Scope: B12 is now complete — all four inline editing flows have Playwright browser-flow coverage. Good next candidates:
   - Pack archiving / starring — allow marking a pack as starred or archived for better curation
-- Why now: filter is now complete for all fields; the remaining gap is automated UI test coverage
+  - Browser test expansion — extend Playwright coverage to delete, duplicate, re-run, and export flows
+- Why now: core editing loop and its coverage are complete; next highest-ROI step is either richer curation (starred/archived) or coverage for the remaining UI flows
 - Stop-line: do not begin a new slice in this session
 
 ## If blocked
