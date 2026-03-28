@@ -9,7 +9,11 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-_No items currently ready. Consider browser-flow test coverage or a new user-visible feature._
+### B8 — Surface notes and tags in GitHub Issue markdown export
+- Value: completeness — notes and tags are now saved but not exported
+- Scope: `src/core/issueMarkdown.ts` + update markdown test
+- Risk: low
+- Verification: existing markdown tests pass, new test covers notes/tags sections
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -37,3 +41,6 @@ Move completed items here with short completion notes.
 
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
+
+### B7 — Pack organization and refinement milestone
+- Completed: notes (PATCH + inline editor), tags (PATCH + chip add/remove + server normalization), sidebar tag badges + note indicator, filter extended to match notes/tags, duplicate pack (POST + button), 21 new tests. 48 tests total.
