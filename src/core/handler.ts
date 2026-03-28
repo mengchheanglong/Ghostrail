@@ -93,8 +93,8 @@ export function createHandler(dataDir: string, publicDir: string) {
 
       if (method === "PATCH" && url.pathname.startsWith("/api/intent-packs/")) {
         const id = url.pathname.slice("/api/intent-packs/".length);
-        const body = await readJson<{ notes?: unknown; tags?: unknown }>(req);
-        const patch: { notes?: string; tags?: string[] } = {};
+        const body = await readJson<{ notes?: unknown; tags?: unknown; goal?: unknown; repositoryContext?: unknown }>(req);
+        const patch: { notes?: string; tags?: string[]; goal?: string; repositoryContext?: string } = {};
         if (body.notes !== undefined) {
           if (typeof body.notes !== "string") {
             return json(res, 400, { error: "notes must be a string" });
@@ -118,6 +118,22 @@ export function createHandler(dataDir: string, publicDir: string) {
             seen.add(lower);
             patch.tags.push(normalized);
           }
+        }
+        if (body.goal !== undefined) {
+          if (typeof body.goal !== "string") {
+            return json(res, 400, { error: "goal must be a string" });
+          }
+          const trimmedGoal = body.goal.trim();
+          if (!trimmedGoal) {
+            return json(res, 400, { error: "goal must not be empty" });
+          }
+          patch.goal = trimmedGoal;
+        }
+        if (body.repositoryContext !== undefined) {
+          if (typeof body.repositoryContext !== "string") {
+            return json(res, 400, { error: "repositoryContext must be a string" });
+          }
+          patch.repositoryContext = body.repositoryContext.trim();
         }
         const updated = await patchIntentPack(id, patch, dataDir);
         if (!updated) return json(res, 404, { error: "not found" });

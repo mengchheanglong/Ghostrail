@@ -307,6 +307,64 @@ test("older packs without notes or tags still load safely", async () => {
   });
 });
 
+// ── Goal and repositoryContext patching ───────────────────────
+
+test("patchIntentPack updates goal", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Original goal" });
+    const stored = await saveIntentPack(pack, "Original goal", undefined, dir);
+
+    const patched = await patchIntentPack(stored.id, { goal: "Updated goal" }, dir);
+    assert.ok(patched, "patchIntentPack should return the updated pack");
+    assert.equal(patched!.goal, "Updated goal", "goal should be updated");
+
+    const fetched = await getIntentPackById(stored.id, dir);
+    assert.equal(fetched!.goal, "Updated goal", "updated goal should survive disk round-trip");
+  });
+});
+
+test("patchIntentPack updates repositoryContext", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack for context patch" });
+    const stored = await saveIntentPack(pack, "Pack for context patch", undefined, dir);
+
+    const patched = await patchIntentPack(stored.id, { repositoryContext: "React frontend" }, dir);
+    assert.ok(patched, "patchIntentPack should return the updated pack");
+    assert.equal(patched!.repositoryContext, "React frontend", "repositoryContext should be updated");
+
+    const fetched = await getIntentPackById(stored.id, dir);
+    assert.equal(fetched!.repositoryContext, "React frontend", "updated repositoryContext should survive disk round-trip");
+  });
+});
+
+test("patchIntentPack with empty repositoryContext removes the field", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack with context to clear" });
+    const stored = await saveIntentPack(pack, "Pack with context to clear", "Some context", dir);
+
+    const patched = await patchIntentPack(stored.id, { repositoryContext: "" }, dir);
+    assert.ok(patched, "patchIntentPack should return the updated pack");
+    assert.equal(patched!.repositoryContext, undefined, "repositoryContext should be removed when set to empty string");
+
+    const fetched = await getIntentPackById(stored.id, dir);
+    assert.equal(fetched!.repositoryContext, undefined, "removed repositoryContext should not reappear after reload");
+  });
+});
+
+test("patchIntentPack can update goal without touching notes or tags", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack with notes and goal" });
+    const stored = await saveIntentPack(pack, "Pack with notes and goal", undefined, dir);
+    await patchIntentPack(stored.id, { notes: "Keep this note", tags: ["keep-me"] }, dir);
+
+    const patched = await patchIntentPack(stored.id, { goal: "New goal only" }, dir);
+    assert.ok(patched);
+    assert.equal(patched!.goal, "New goal only");
+    assert.equal(patched!.notes, "Keep this note", "notes should be untouched");
+    assert.deepEqual(patched!.tags, ["keep-me"], "tags should be untouched");
+  });
+});
+
 // ── Duplicate pack ────────────────────────────────────────────
 
 test("duplicateIntentPack creates a new pack with a new id and createdAt", async () => {

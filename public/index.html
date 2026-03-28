@@ -433,6 +433,40 @@
               <button id="cancelDeleteBtn" class="btn-cancel" style="display:none">Cancel</button>
               <span id="exportStatus" class="export-status"></span>
             </div>
+
+            <!-- Goal section (editable) -->
+            <div id="goalSection" style="display:none">
+              <div class="section-heading-row">
+                <h3>Original Goal</h3>
+                <button id="editGoalBtn" class="btn-small">Edit</button>
+              </div>
+              <p id="goalDisplay" class="detail-text"></p>
+              <div id="goalEditor" style="display:none">
+                <textarea id="goalEditInput" class="notes-textarea" placeholder="Enter feature goal…"></textarea>
+                <p id="goalEditError" class="state-msg error" style="display:none"></p>
+                <div class="notes-editor-actions">
+                  <button id="saveGoalBtn">Save goal</button>
+                  <button id="cancelGoalBtn" class="btn-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Repository Context section (editable) -->
+            <div id="contextSection" style="display:none">
+              <div class="section-heading-row">
+                <h3>Repository Context</h3>
+                <button id="editContextBtn" class="btn-small">Edit</button>
+              </div>
+              <p id="contextDisplay" class="detail-text"></p>
+              <div id="contextEditor" style="display:none">
+                <textarea id="contextEditInput" class="notes-textarea" placeholder="Optional repository context…"></textarea>
+                <div class="notes-editor-actions">
+                  <button id="saveContextBtn">Save context</button>
+                  <button id="cancelContextBtn" class="btn-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+
             <div id="detailContent"></div>
 
             <!-- Notes section -->
@@ -484,6 +518,21 @@
       const deleteBtn      = document.getElementById("deleteBtn");
       const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
+      const goalSection    = document.getElementById("goalSection");
+      const goalDisplay    = document.getElementById("goalDisplay");
+      const goalEditor     = document.getElementById("goalEditor");
+      const goalEditInput  = document.getElementById("goalEditInput");
+      const goalEditError  = document.getElementById("goalEditError");
+      const editGoalBtn    = document.getElementById("editGoalBtn");
+      const saveGoalBtn    = document.getElementById("saveGoalBtn");
+      const cancelGoalBtn  = document.getElementById("cancelGoalBtn");
+      const contextSection   = document.getElementById("contextSection");
+      const contextDisplay   = document.getElementById("contextDisplay");
+      const contextEditor    = document.getElementById("contextEditor");
+      const contextEditInput = document.getElementById("contextEditInput");
+      const editContextBtn   = document.getElementById("editContextBtn");
+      const saveContextBtn   = document.getElementById("saveContextBtn");
+      const cancelContextBtn = document.getElementById("cancelContextBtn");
       const notesSection   = document.getElementById("notesSection");
       const notesDisplay   = document.getElementById("notesDisplay");
       const notesEditor    = document.getElementById("notesEditor");
@@ -591,6 +640,33 @@
       }
 
       // ── Pack detail rendering ─────────────────────────────────
+      function renderGoalSection(pack) {
+        goalSection.style.display = "";
+        goalEditor.style.display = "none";
+        editGoalBtn.style.display = "";
+        goalEditError.style.display = "none";
+        if (pack.goal) {
+          goalDisplay.textContent = pack.goal;
+          goalDisplay.className = "detail-text";
+        } else {
+          goalDisplay.textContent = "Not available for older packs.";
+          goalDisplay.className = "detail-text muted";
+        }
+      }
+
+      function renderContextSection(pack) {
+        contextSection.style.display = "";
+        contextEditor.style.display = "none";
+        editContextBtn.style.display = "";
+        if (pack.repositoryContext) {
+          contextDisplay.textContent = pack.repositoryContext;
+          contextDisplay.className = "detail-text";
+        } else {
+          contextDisplay.textContent = "No repository context.";
+          contextDisplay.className = "detail-text muted";
+        }
+      }
+
       function renderNotesSection(pack) {
         notesSection.style.display = "";
         notesEditor.style.display = "none";
@@ -654,19 +730,6 @@
             <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
           </div>
 
-          <div class="detail-section">
-            <h3>Original Goal</h3>
-            <p class="detail-text">${
-              pack.goal ? escapeHtml(pack.goal) : "<em class='muted'>Not available for older packs</em>"
-            }</p>
-          </div>
-
-          ${pack.repositoryContext ? `
-          <div class="detail-section">
-            <h3>Repository Context</h3>
-            <p class="detail-text">${escapeHtml(pack.repositoryContext)}</p>
-          </div>` : ""}
-
           <div class="detail-objective">${escapeHtml(pack.objective)}</div>
 
           <div class="detail-section">
@@ -690,6 +753,8 @@
           </div>
         `;
 
+        renderGoalSection(pack);
+        renderContextSection(pack);
         renderNotesSection(pack);
         renderTagsSection(pack);
       }
@@ -708,6 +773,11 @@
         cancelDeleteBtn.style.display = "none";
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
+        goalSection.style.display = "none";
+        goalEditor.style.display = "none";
+        goalEditError.style.display = "none";
+        contextSection.style.display = "none";
+        contextEditor.style.display = "none";
         notesSection.style.display = "none";
         notesEditor.style.display = "none";
         tagsSection.style.display = "none";
@@ -925,6 +995,104 @@
         } finally {
           duplicateBtn.disabled = false;
           duplicateBtn.textContent = "Duplicate pack";
+        }
+      });
+
+      // ── Goal editing ──────────────────────────────────────────
+      editGoalBtn.addEventListener("click", () => {
+        goalEditInput.value = selectedPack?.goal || "";
+        goalEditor.style.display = "";
+        editGoalBtn.style.display = "none";
+        goalEditError.style.display = "none";
+        goalEditInput.focus();
+      });
+
+      cancelGoalBtn.addEventListener("click", () => {
+        goalEditor.style.display = "none";
+        editGoalBtn.style.display = "";
+        goalEditError.style.display = "none";
+      });
+
+      saveGoalBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        const goal = goalEditInput.value.trim();
+        if (!goal) {
+          goalEditError.textContent = "Goal must not be empty.";
+          goalEditError.style.display = "";
+          return;
+        }
+        goalEditError.style.display = "none";
+        saveGoalBtn.disabled = true;
+        saveGoalBtn.textContent = "Saving…";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ goal })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Save failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          rerunBtn.disabled = !updated.goal;
+          rerunBtn.title = updated.goal ? "" : "No original goal stored for this pack";
+          renderGoalSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          goalEditError.textContent = "Save failed: " + (err.message || "unknown error");
+          goalEditError.style.display = "";
+        } finally {
+          saveGoalBtn.disabled = false;
+          saveGoalBtn.textContent = "Save goal";
+        }
+      });
+
+      // ── Repository Context editing ────────────────────────────
+      editContextBtn.addEventListener("click", () => {
+        contextEditInput.value = selectedPack?.repositoryContext || "";
+        contextEditor.style.display = "";
+        editContextBtn.style.display = "none";
+        contextEditInput.focus();
+      });
+
+      cancelContextBtn.addEventListener("click", () => {
+        contextEditor.style.display = "none";
+        editContextBtn.style.display = "";
+      });
+
+      saveContextBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        const repositoryContext = contextEditInput.value.trim();
+        saveContextBtn.disabled = true;
+        saveContextBtn.textContent = "Saving…";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ repositoryContext })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Save failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          renderContextSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          exportStatus.textContent = "Save context failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          saveContextBtn.disabled = false;
+          saveContextBtn.textContent = "Save context";
         }
       });
 

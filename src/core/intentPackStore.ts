@@ -84,7 +84,7 @@ export async function deleteIntentPack(
 
 export async function patchIntentPack(
   id: string,
-  patch: { notes?: string; tags?: string[] },
+  patch: { notes?: string; tags?: string[]; goal?: string; repositoryContext?: string },
   dataDir = defaultDataDir
 ): Promise<StoredIntentPack | null> {
   if (!uuidPattern.test(id)) return null;
@@ -101,6 +101,16 @@ export async function patchIntentPack(
   }
   if (patch.tags !== undefined) {
     stored.tags = patch.tags;
+  }
+  if (patch.goal !== undefined) {
+    stored.goal = patch.goal;
+  }
+  if (patch.repositoryContext !== undefined) {
+    if (patch.repositoryContext === "") {
+      delete stored.repositoryContext;
+    } else {
+      stored.repositoryContext = patch.repositoryContext;
+    }
   }
   await writeFile(filePath, JSON.stringify(stored, null, 2), "utf8");
   return stored;
