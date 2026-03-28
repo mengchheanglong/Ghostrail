@@ -22,12 +22,13 @@ Ghostrail currently supports:
 - **tags on saved packs (add/remove via PATCH, normalized server-side)**
 - **sidebar shows compact tag chips and note indicator**
 - **duplicate pack (POST /api/intent-packs/:id/duplicate)**
+- **notes and tags surfaced in GitHub Issue markdown export**
 
 ## Current verified baseline
 - POST /api/intent-pack works
 - GET /api/intent-packs works
 - GET /api/intent-packs/:id works
-- GET /api/intent-packs/:id/export-issue works
+- GET /api/intent-packs/:id/export-issue works (includes notes and tags when present)
 - POST /api/intent-pack/export-issue works
 - DELETE /api/intent-packs/:id works
 - PATCH /api/intent-packs/:id works (notes, tags, normalized)
@@ -41,8 +42,10 @@ Ghostrail currently supports:
 - UI sidebar shows compact tag badges and note indicator
 - UI supports duplicate pack (POST, refreshes + selects new)
 - draft hint shows the source pack's goal after re-run
+- GitHub Issue markdown export includes tags line when present
+- GitHub Issue markdown export includes notes section when present
 - build passes
-- all 48 tests pass
+- all 53 tests pass
 
 ## Active stop-line
 Only take the next safe bounded slice.
@@ -65,6 +68,19 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
+- Slice: B8 — Surface notes and tags in GitHub Issue markdown export
+- Why this was the right next move: notes and tags were persisted and shown in the UI but dropped during export; completing this makes the export coherent with the saved-pack data model; single-file formatter change, low risk
+- Files changed:
+  - `src/core/issueMarkdown.ts` — widened parameter to `IntentPack & { notes?: string; tags?: string[] }`; added compact `**Tags:** ...` line after Objective when tags present; added `## Notes` section before Review note when notes non-blank; no change to existing sections
+  - `src/generateIntentPack.test.ts` — imported `IntentPack` type and `basePack` helper; 5 new tests: tags present, notes present, tags absent/empty, notes absent/blank, older pack backward compat
+- Verification:
+  - `npm run build` passes (TypeScript, zero errors)
+  - `npm test` passes (53/53 tests)
+  - CodeQL: 0 alerts
+- Result: working
+- Rollback path: revert `issueMarkdown.ts` to single-parameter version, remove 5 new tests
+
+### Previous completed slice
 - Slice: Saved Intent Pack organization and refinement milestone (all 6 subparts)
 - Subparts completed:
   1. Notes support — PATCH endpoint + inline editor UI + backward compat
@@ -89,13 +105,13 @@ Choose the highest-ROI task that is:
 - Rollback path: revert all 6 files to previous state
 
 ### Current recommended next slice
-- Scope: The product loop is now substantially more complete. Good next candidates:
-  - Pack export includes notes and tags in the GitHub Issue markdown (currently the markdown template ignores these fields)
-  - Browser-flow tests for notes/tags/duplicate UI interactions (if jsdom or playwright is added)
-  - Pack metadata editing (allow editing goal or repositoryContext after creation)
-- Why now: notes and tags are persisted and shown but not yet exported — the next logical step is to surface them in the GitHub issue markdown so teams can use them in issue tracking
-- Expected files: `src/core/issueMarkdown.ts` (add notes/tags sections), `src/generateIntentPack.test.ts` (extend markdown test)
-- Stop-line: do not change the API shape; the export endpoint already returns markdown from `toGitHubIssueMarkdown`
+- Scope: The export loop is now complete for notes and tags. Good next candidates:
+  - Pack metadata editing — allow editing the goal or repositoryContext after creation (currently read-only in the detail view)
+  - Browser-flow tests for notes/tags/duplicate UI interactions (requires jsdom or playwright)
+  - Export format polish — include repositoryContext in the GitHub Issue markdown when present (currently also dropped)
+- Why now: export is now coherent with saved-pack data; editing goal/repositoryContext would close the remaining read-only gap in the detail view
+- Expected files: `src/core/handler.ts` (new PATCH sub-fields or extend existing PATCH), `src/core/intentPackStore.ts`, `public/index.html` (editable goal/context fields), tests
+- Stop-line: do not redesign the pack schema; only allow editing the mutable user-supplied fields (goal, repositoryContext)
 
 ## If blocked
 If blocked, stop and write:
