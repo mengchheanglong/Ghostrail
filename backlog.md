@@ -9,12 +9,6 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-### B11 — Extend search/filter to match repositoryContext
-- Value: discoverability — repositoryContext is now editable but still not searched; users with context-heavy packs can't find them by context keywords
-- Scope: one-line change to `getFilteredPacks()` predicate in `public/index.html`
-- Risk: very low (pure client-side filter addition, no server changes)
-- Verification: manual filter test in browser
-
 ### B12 — Browser-flow tests for inline editors (goal, context, notes, tags)
 - Value: safety — UI editing flows have no automated coverage; manual verification only
 - Scope: add jsdom or playwright tests for the inline editor interactions
@@ -47,6 +41,9 @@ Move completed items here with short completion notes.
 
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
+
+### B11 — Extend search/filter to match repositoryContext
+- Completed: `getFilteredPacks()` predicate extended with one line — repositoryContext now participates in case-insensitive matching; backward-compatible (guard on `p.repositoryContext`); no server changes; 69 tests still pass.
 
 ### B10 — Pack metadata editing (goal and repositoryContext)
 - Completed: PATCH endpoint extended to accept goal (rejects empty, trims) and repositoryContext (trims, blank clears field); inline edit/save/cancel UI added for both fields in detail view; re-run button updates after goal edit; 12 new tests (69 total).

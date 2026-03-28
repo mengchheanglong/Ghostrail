@@ -12,7 +12,7 @@ Ghostrail currently supports:
 - GitHub issue markdown export
 - original goal persistence
 - repositoryContext persistence
-- search/filter saved packs (matches goal, objective, touchedAreas, notes, tags)
+- search/filter saved packs (matches goal, objective, touchedAreas, notes, tags, repositoryContext)
 - delete saved pack (inline two-step confirmation)
 - responsive layout
 - re-run from saved pack (prefill generator form from a selected pack)
@@ -37,7 +37,7 @@ Ghostrail currently supports:
 - PATCH /api/intent-packs/:id works (notes, tags, goal, repositoryContext; normalized/validated)
 - POST /api/intent-packs/:id/duplicate works
 - UI shows saved packs and detail view
-- UI supports search/filter (goal, objective, touchedAreas, notes, tags)
+- UI supports search/filter (goal, objective, touchedAreas, notes, tags, repositoryContext)
 - UI supports inline delete confirmation (two-step, no window.confirm)
 - UI supports re-run/prefill from a saved pack
 - UI supports notes editing (inline editor, PATCH on save)
@@ -75,6 +75,18 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
+- Slice: B11 — Extend search/filter to match repositoryContext
+- Why this was the right next move: repositoryContext was the only persisted, visible, and editable field that was still absent from the client-side filter predicate; one-line addition, zero server impact, zero risk, completes the consistency gap
+- Files changed:
+  - `public/index.html` — added `if (p.repositoryContext && p.repositoryContext.toLowerCase().includes(q)) return true;` to `getFilteredPacks()`, after the tags line, following the exact same guard pattern as goal/notes
+- Verification:
+  - `npm run build` passes (TypeScript, zero errors)
+  - `npm test` passes (69/69 tests; no change to test count — filter logic is browser-only, no practical unit test path without jsdom)
+  - Manual verification target: search by repositoryContext substring finds the correct pack; packs without repositoryContext still work; case-insensitive; existing fields unaffected
+- Result: working
+- Rollback path: remove the single added line from `getFilteredPacks()`
+
+### Previous completed slice (B10)
 - Slice: B10 — Pack metadata editing (goal and repositoryContext)
 - Why this was the right next move: goal and repositoryContext were already persisted, shown in the detail view, and exported — but read-only after creation; extending PATCH and adding inline editors followed the existing notes/tags pattern exactly; single coherent slice with clear local verification
 - Files changed:
@@ -128,12 +140,10 @@ Choose the highest-ROI task that is:
 - Rollback path: revert all 6 files to previous state
 
 ### Current recommended next slice
-- Scope: B10 is now complete — all persisted pack fields (goal, repositoryContext, notes, tags) are fully editable from the detail view. Good next candidates:
-  - Search/filter extension — extend client-side filter to also match repositoryContext (currently omitted from the filter predicate)
-  - Browser-flow tests for the new goal/context editors (requires jsdom or playwright)
+- Scope: B11 is now complete — all persisted pack fields (goal, repositoryContext, notes, tags) are now searchable. Good next candidates:
+  - Browser-flow tests for inline editors (B12) — goal/context/notes/tags editing flows have no automated coverage; requires jsdom or playwright
   - Pack archiving / starring — allow marking a pack as starred or archived for better curation
-- Why now: core editing loop is complete; a natural next step is making edited values discoverable (search), or adding structured curation (starred/archived)
-- Expected files for repositoryContext filter: `public/index.html` only (one-line filter predicate change + test is not practical without jsdom)
+- Why now: filter is now complete for all fields; the remaining gap is automated UI test coverage
 - Stop-line: do not begin a new slice in this session
 
 ## If blocked

@@ -598,6 +598,7 @@
           if (Array.isArray(p.touchedAreas) && p.touchedAreas.some(a => a.toLowerCase().includes(q))) return true;
           if (p.notes && p.notes.toLowerCase().includes(q)) return true;
           if (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q))) return true;
+          if (p.repositoryContext && p.repositoryContext.toLowerCase().includes(q)) return true;
           return false;
         });
       }
