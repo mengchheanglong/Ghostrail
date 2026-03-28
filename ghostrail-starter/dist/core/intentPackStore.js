@@ -25,7 +25,12 @@ export async function listIntentPacks(dataDir = defaultDataDir) {
             continue;
         try {
             const content = await readFile(join(dataDir, file), "utf8");
-            packs.push(JSON.parse(content));
+            const parsed = JSON.parse(content);
+            if (typeof parsed.id !== "string" || typeof parsed.createdAt !== "string") {
+                console.error(`Skipping intent pack file with missing id or createdAt: ${file}`);
+                continue;
+            }
+            packs.push(parsed);
         }
         catch (err) {
             console.error(`Skipping malformed intent pack file: ${file}`, err);
