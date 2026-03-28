@@ -25,7 +25,7 @@ Ghostrail currently supports:
 - **notes and tags surfaced in GitHub Issue markdown export**
 - **repositoryContext surfaced in GitHub Issue markdown export**
 - **goal editing on saved packs (inline editor, PATCH on save, rejects empty)**
-- **browser-flow tests for inline editors (Playwright, B12)**
+- **browser-flow tests for saved-pack action buttons (Playwright, B13-browser): re-run, delete confirmation, duplicate**
 
 ## Current verified baseline
 - POST /api/intent-pack works
@@ -45,7 +45,7 @@ Ghostrail currently supports:
 - UI sidebar shows compact tag badges and note indicator
 - UI supports duplicate pack (POST, refreshes + selects new)
 - UI supports goal editing (inline editor, PATCH on save, empty rejected client- and server-side)
-- UI inline editors are covered by 4 Playwright browser-flow tests (goal, repositoryContext, notes, tags)
+- UI saved-pack action flows covered by 5 Playwright browser-flow tests (re-run prefill, re-run + generate, delete cancel, delete confirm, duplicate)
 - re-run button updates correctly after goal is edited
 - draft hint shows the source pack's goal after re-run
 - GitHub Issue markdown export includes tags line when present
@@ -75,6 +75,18 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
+- Slice: B13-browser — Browser-flow tests for saved-pack action buttons (re-run, delete confirmation, duplicate)
+- Why this was the right next move: Playwright infrastructure was already in place from B12; three high-value UI action flows (re-run, inline delete, duplicate) were still manually verified only; adding tests in an existing spec directory required no new dependencies or configuration; single coherent test-only slice with clear verification
+- Files changed:
+  - `tests/browser/actions.spec.ts` (new) — 5 browser-flow tests: re-run prefills form + shows draftHint; re-run then generate creates a new pack; delete first click shows confirm state and cancel resets it; delete confirm removes pack and shows empty state; duplicate creates new pack with new ID while original remains
+- Verification:
+  - `npm run build` passes (TypeScript, zero errors)
+  - `npm test` passes (69/69 tests; unchanged)
+  - `npm run test:browser` passes (9/9 browser-flow tests; ~4.3s)
+- Result: working
+- Rollback path: remove `tests/browser/actions.spec.ts`
+
+### Previous completed slice (B12)
 - Slice: B12 — Browser-flow tests for inline editors (goal, repositoryContext, notes, tags)
 - Why this was the right next move: all four inline editing flows were working but only manually verified; adding Playwright tests closes the automated coverage gap; Playwright + system Chrome required no new browser download; single coherent test slice with clear verification
 - Files changed:
@@ -154,10 +166,9 @@ Choose the highest-ROI task that is:
 - Rollback path: revert all 6 files to previous state
 
 ### Current recommended next slice
-- Scope: B12 is now complete — all four inline editing flows have Playwright browser-flow coverage. Good next candidates:
-  - Pack archiving / starring — allow marking a pack as starred or archived for better curation
-  - Browser test expansion — extend Playwright coverage to delete, duplicate, re-run, and export flows
-- Why now: core editing loop and its coverage are complete; next highest-ROI step is either richer curation (starred/archived) or coverage for the remaining UI flows
+- Scope: B13-browser is now complete — all main saved-pack UI actions (inline editors + re-run + delete + duplicate) have Playwright browser-flow coverage. Good next candidates:
+  - Pack archiving / starring (B13) — allow marking a pack as starred or archived for better curation; new field, PATCH support, sidebar indicator
+- Why now: automated browser coverage is now complete for all main flows; the next highest-ROI step is a product feature rather than test infrastructure
 - Stop-line: do not begin a new slice in this session
 
 ## If blocked

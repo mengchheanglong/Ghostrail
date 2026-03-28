@@ -42,6 +42,9 @@ Move completed items here with short completion notes.
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
 
+### B13-browser — Browser-flow tests for saved-pack action buttons (re-run, delete, duplicate)
+- Completed: `tests/browser/actions.spec.ts` added with 5 tests: re-run prefills form, re-run + generate creates new pack, delete cancel path, delete confirm removes pack, duplicate creates new pack with new ID; 9/9 browser tests pass total; 69 unit tests unchanged.
+
 ### B12 — Browser-flow tests for inline editors (goal, context, notes, tags)
 - Completed: Playwright installed (`@playwright/test` 1.58.2); `playwright.config.ts` added; `tests/browser/editing.spec.ts` added with 4 tests (edit goal, edit repositoryContext, edit notes, add/remove tag); all 4 pass in ~7.6s; 69 existing unit/integration tests unchanged; `npm run test:browser` is the new command.
 
