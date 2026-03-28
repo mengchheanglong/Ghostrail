@@ -18,7 +18,7 @@ async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
 test("saving a generated pack persists id and createdAt", async () => {
   await withTempDir(async (dir) => {
     const pack = generateIntentPack({ goal: "Add file persistence for intent packs" });
-    const stored = await saveIntentPack(pack, dir);
+    const stored = await saveIntentPack(pack, undefined, dir);
 
     assert.ok(stored.id, "stored pack should have an id");
     assert.ok(stored.createdAt, "stored pack should have a createdAt timestamp");
@@ -33,10 +33,10 @@ test("listing saved packs returns all packs newest first", async () => {
     const pack1 = generateIntentPack({ goal: "First pack goal" });
     const pack2 = generateIntentPack({ goal: "Second pack goal" });
 
-    const stored1 = await saveIntentPack(pack1, dir);
+    const stored1 = await saveIntentPack(pack1, undefined, dir);
     // Small delay so the two timestamps are distinct
     await new Promise<void>((resolve) => setTimeout(resolve, 5));
-    const stored2 = await saveIntentPack(pack2, dir);
+    const stored2 = await saveIntentPack(pack2, undefined, dir);
 
     const list = await listIntentPacks(dir);
 
@@ -49,11 +49,9 @@ test("listing saved packs returns all packs newest first", async () => {
 test("fetching a saved pack by id returns the correct pack", async () => {
   await withTempDir(async (dir) => {
     const pack = generateIntentPack({ goal: "Fetch pack by id test" });
-    const stored = await saveIntentPack(pack, dir);
+    const stored = await saveIntentPack(pack, undefined, dir);
 
     const fetched = await getIntentPackById(stored.id, dir);
-
-    assert.ok(fetched, "should find the pack");
     if (!fetched) throw new Error("pack not found");
     assert.equal(fetched.id, stored.id);
     assert.equal(fetched.createdAt, stored.createdAt);
@@ -82,9 +80,69 @@ test("listIntentPacks skips malformed JSON files without crashing", async () => 
     await writeFile(join(dir, "bad.json"), "{ not valid json", "utf8");
 
     const pack = generateIntentPack({ goal: "Valid pack alongside broken file" });
-    await saveIntentPack(pack, dir);
+    await saveIntentPack(pack, undefined, dir);
 
     const list = await listIntentPacks(dir);
     assert.equal(list.length, 1, "only the valid pack should be returned");
+  });
+});
+
+test("saving a pack with a goal persists the goal field", async () => {
+  await withTempDir(async (dir) => {
+    const goalText = "Add real-time notifications without breaking the existing feed";
+    const pack = generateIntentPack({ goal: goalText });
+    const stored = await saveIntentPack(pack, goalText, dir);
+
+    assert.equal(stored.goal, goalText, "stored pack should carry the original goal");
+
+    // Verify it was written to disk
+    const fetched = await getIntentPackById(stored.id, dir);
+    assert.ok(fetched, "should find the pack on disk");
+    if (!fetched) throw new Error("pack not found");
+    assert.equal(fetched.goal, goalText, "goal should survive the disk round-trip");
+  });
+});
+
+test("listing packs includes goal for new packs", async () => {
+  await withTempDir(async (dir) => {
+    const goalText = "Export packs as GitHub issues";
+    const pack = generateIntentPack({ goal: goalText });
+    await saveIntentPack(pack, goalText, dir);
+
+    const list = await listIntentPacks(dir);
+    assert.equal(list.length, 1);
+    assert.equal(list[0]!.goal, goalText, "list should expose the original goal");
+  });
+});
+
+test("older packs without goal still load safely", async () => {
+  const { writeFile } = await import("node:fs/promises");
+  await withTempDir(async (dir) => {
+    // Simulate an older stored pack that has no goal field
+    const id = "11111111-2222-3333-4444-555555555555";
+    const oldPack = {
+      id,
+      createdAt: new Date().toISOString(),
+      objective: "Old objective",
+      nonGoals: [],
+      constraints: [],
+      acceptanceCriteria: [],
+      touchedAreas: [],
+      risks: [],
+      openQuestions: [],
+      confidence: "medium",
+      reasoningMode: "heuristic"
+      // deliberately no `goal` field
+    };
+    await writeFile(join(dir, `${id}.json`), JSON.stringify(oldPack, null, 2), "utf8");
+
+    const list = await listIntentPacks(dir);
+    assert.equal(list.length, 1, "old pack should still be loaded");
+    assert.equal(list[0]!.goal, undefined, "goal should be undefined for old packs");
+
+    const fetched = await getIntentPackById(id, dir);
+    assert.ok(fetched, "old pack should be fetchable by id");
+    if (!fetched) throw new Error("pack not found");
+    assert.equal(fetched.goal, undefined, "goal should be undefined for old pack fetched by id");
   });
 });

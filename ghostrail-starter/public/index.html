@@ -328,6 +328,13 @@
             <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
           </div>
 
+          <div class="detail-section">
+            <h3>Original Goal</h3>
+            <p style="font-size:0.9rem;line-height:1.6;color:#d1d5db;margin:4px 0 12px;word-break:break-word">${
+              pack.goal ? escapeHtml(pack.goal) : "<em class='muted'>Not available for older packs</em>"
+            }</p>
+          </div>
+
           <div class="detail-objective">${escapeHtml(pack.objective)}</div>
 
           <div class="detail-section">

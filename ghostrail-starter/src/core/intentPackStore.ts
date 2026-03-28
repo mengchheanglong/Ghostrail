@@ -15,13 +15,20 @@ async function ensureDir(dir: string): Promise<void> {
 
 export async function saveIntentPack(
   pack: IntentPack,
-  dataDir = defaultDataDir
+  goal?: string,
+  dataDir?: string
 ): Promise<StoredIntentPack> {
-  await ensureDir(dataDir);
+  const dir = dataDir ?? defaultDataDir;
+  await ensureDir(dir);
   const id = crypto.randomUUID();
   const createdAt = new Date().toISOString();
-  const stored: StoredIntentPack = { id, createdAt, ...pack };
-  await writeFile(join(dataDir, `${id}.json`), JSON.stringify(stored, null, 2), "utf8");
+  const stored: StoredIntentPack = {
+    id,
+    createdAt,
+    ...(goal !== undefined ? { goal } : {}),
+    ...pack,
+  };
+  await writeFile(join(dir, `${id}.json`), JSON.stringify(stored, null, 2), "utf8");
   return stored;
 }
 

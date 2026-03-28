@@ -8,12 +8,18 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 async function ensureDir(dir) {
     await mkdir(dir, { recursive: true });
 }
-export async function saveIntentPack(pack, dataDir = defaultDataDir) {
-    await ensureDir(dataDir);
+export async function saveIntentPack(pack, goal, dataDir) {
+    const dir = dataDir ?? defaultDataDir;
+    await ensureDir(dir);
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
-    const stored = { id, createdAt, ...pack };
-    await writeFile(join(dataDir, `${id}.json`), JSON.stringify(stored, null, 2), "utf8");
+    const stored = {
+        id,
+        createdAt,
+        ...(goal !== undefined ? { goal } : {}),
+        ...pack,
+    };
+    await writeFile(join(dir, `${id}.json`), JSON.stringify(stored, null, 2), "utf8");
     return stored;
 }
 export async function listIntentPacks(dataDir = defaultDataDir) {

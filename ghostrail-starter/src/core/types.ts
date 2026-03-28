@@ -18,4 +18,5 @@ export interface IntentPack {
 export interface StoredIntentPack extends IntentPack {
   id: string;
   createdAt: string;
+  goal?: string;
 }

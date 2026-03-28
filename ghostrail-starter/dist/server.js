@@ -29,7 +29,8 @@ const server = createServer(async (req, res) => {
                 return json(res, 400, { error: "goal is required" });
             }
             const pack = generateIntentPack(body);
-            const stored = await saveIntentPack(pack);
+            const goalText = body.goal ? body.goal.trim() : undefined;
+            const stored = await saveIntentPack(pack, goalText);
             return json(res, 200, stored);
         }
         if (method === "POST" && url.pathname === "/api/intent-pack/export-issue") {
