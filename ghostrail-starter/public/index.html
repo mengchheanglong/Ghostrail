@@ -15,7 +15,7 @@
         color: #e5e7eb;
       }
       .wrap {
-        max-width: 980px;
+        max-width: 1200px;
         margin: 0 auto;
         padding: 40px 20px 80px;
       }
@@ -37,28 +37,203 @@
         box-sizing: border-box;
       }
       textarea {
-        min-height: 120px;
+        min-height: 100px;
         resize: vertical;
+        font-family: inherit;
+        font-size: 0.95rem;
       }
       button {
         cursor: pointer;
         font-weight: 700;
         margin-top: 12px;
+        font-size: 0.95rem;
       }
-      pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: rgba(0, 0, 0, 0.25);
-        padding: 16px;
-        border-radius: 12px;
-        overflow: auto;
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
       .muted {
         color: #9ca3af;
+        margin: 0 0 4px;
       }
       h1, h2 {
-        margin-bottom: 8px;
+        margin: 0 0 8px;
       }
+      h3 {
+        margin: 16px 0 6px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+      }
+
+      /* ── Two-column layout ── */
+      .layout {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        margin-top: 20px;
+      }
+      .sidebar {
+        width: 300px;
+        flex-shrink: 0;
+      }
+      .main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* ── Responsive: stack on narrow screens ── */
+      @media (max-width: 640px) {
+        .layout {
+          flex-direction: column;
+        }
+        .sidebar {
+          width: 100%;
+        }
+      }
+
+      /* ── Search input ── */
+      .pack-search {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+        color: inherit;
+        padding: 8px 12px;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 0.85rem;
+        margin: 8px 0 4px;
+      }
+      .pack-search:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+
+      /* ── Pack list ── */
+      .pack-list {
+        list-style: none;
+        margin: 8px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .pack-item {
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .pack-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .pack-item.selected {
+        background: rgba(99, 102, 241, 0.15);
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+      .pack-item-objective {
+        font-size: 0.9rem;
+        font-weight: 600;
+        word-break: break-word;
+        margin-bottom: 2px;
+      }
+      .pack-item-goal {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-bottom: 6px;
+      }
+      .pack-item-meta {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .badge {
+        display: inline-block;
+        padding: 1px 7px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .badge-high   { background: rgba(52, 211, 153, 0.2); color: #6ee7b7; }
+      .badge-medium { background: rgba(251, 191, 36, 0.2); color: #fcd34d; }
+      .badge-low    { background: rgba(248, 113, 113, 0.2); color: #fca5a5; }
+
+      /* ── State messages ── */
+      .state-msg {
+        font-size: 0.88rem;
+        color: #9ca3af;
+        padding: 10px 0 4px;
+      }
+      .state-msg.error {
+        color: #fca5a5;
+      }
+
+      /* ── Detail view ── */
+      .detail-meta {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+      .detail-objective {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin: 4px 0 12px;
+      }
+      .detail-text {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #d1d5db;
+        margin: 4px 0 12px;
+        word-break: break-word;
+      }
+      .detail-section ul {
+        margin: 4px 0 12px;
+        padding-left: 18px;
+      }
+      .detail-section li {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #d1d5db;
+      }
+
+      /* ── Action row ── */
+      .detail-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+      }
+      .detail-actions button {
+        width: auto;
+        margin-top: 0;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .btn-danger {
+        color: #fca5a5;
+        border-color: rgba(248, 113, 113, 0.3) !important;
+      }
+      .export-status {
+        font-size: 0.85rem;
+      }
+      .export-status.success { color: #6ee7b7; }
+      .export-status.error   { color: #fca5a5; }
     </style>
   </head>
   <body>
@@ -68,53 +243,356 @@
         Turn a vague software request into an intent pack for humans and coding agents.
       </p>
 
+      <!-- Generator form -->
       <div class="card">
         <h2>Feature request</h2>
         <textarea id="goal" placeholder="Example: Add subscription upgrade flow but do not break current billing or admin behavior."></textarea>
         <textarea id="context" placeholder="Optional repository context: tech stack, sensitive areas, business rules..."></textarea>
-        <button id="generate">Generate Intent Pack</button>
+        <button id="generate">Generate &amp; Save Intent Pack</button>
+        <p id="generateError" class="state-msg error" style="display:none"></p>
       </div>
 
-      <div class="card">
-        <h2>Intent Pack JSON</h2>
-        <pre id="output">Nothing generated yet.</pre>
-      </div>
+      <!-- Two-column browser -->
+      <div class="layout">
+        <!-- Left: saved packs list -->
+        <div class="sidebar">
+          <div class="card" style="margin-top:0">
+            <h2>Saved Packs</h2>
+            <input type="search" id="packSearch" class="pack-search" placeholder="Filter packs…" />
+            <div id="packListState" class="state-msg">Loading…</div>
+            <ul id="packList" class="pack-list" style="display:none"></ul>
+          </div>
+        </div>
 
-      <div class="card">
-        <h2>GitHub Issue Markdown</h2>
-        <pre id="issueOutput">Nothing generated yet.</pre>
+        <!-- Right: detail view -->
+        <div class="main">
+          <div id="detailCard" class="card" style="margin-top:0; display:none">
+            <div id="detailActions" class="detail-actions">
+              <button id="exportBtn" disabled>Copy as GitHub Issue</button>
+              <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
+              <span id="exportStatus" class="export-status"></span>
+            </div>
+            <div id="detailContent"></div>
+          </div>
+        </div>
       </div>
     </div>
 
     <script>
-      const goalInput = document.getElementById("goal");
-      const contextInput = document.getElementById("context");
-      const output = document.getElementById("output");
-      const issueOutput = document.getElementById("issueOutput");
-      const button = document.getElementById("generate");
+      // ── DOM refs ──────────────────────────────────────────────
+      const goalInput      = document.getElementById("goal");
+      const contextInput   = document.getElementById("context");
+      const generateBtn    = document.getElementById("generate");
+      const generateError  = document.getElementById("generateError");
+      const packListEl     = document.getElementById("packList");
+      const packListState  = document.getElementById("packListState");
+      const packSearch     = document.getElementById("packSearch");
+      const detailCard     = document.getElementById("detailCard");
+      const detailContent  = document.getElementById("detailContent");
+      const exportBtn      = document.getElementById("exportBtn");
+      const deleteBtn      = document.getElementById("deleteBtn");
+      const exportStatus   = document.getElementById("exportStatus");
 
-      button.addEventListener("click", async () => {
+      // Track the currently selected pack id and the full unfiltered list
+      let selectedId = null;
+      let allPacks   = [];
+
+      // ── Helpers ───────────────────────────────────────────────
+      const CONFIDENCE_VALUES = ["high", "medium", "low"];
+
+      function formatDate(iso) {
+        try {
+          return new Date(iso).toLocaleString(undefined, {
+            year: "numeric", month: "short", day: "numeric",
+            hour: "2-digit", minute: "2-digit"
+          });
+        } catch (_) {
+          return iso;
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function renderList(items) {
+        if (!items || items.length === 0) return "<li style='color:#9ca3af'>None</li>";
+        return items.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+      }
+
+      // ── Client-side filter ────────────────────────────────────
+      function getFilteredPacks() {
+        const q = packSearch.value.trim().toLowerCase();
+        if (!q) return allPacks;
+        return allPacks.filter(p => {
+          if (p.goal && p.goal.toLowerCase().includes(q)) return true;
+          if (p.objective.toLowerCase().includes(q)) return true;
+          if (Array.isArray(p.touchedAreas) && p.touchedAreas.some(a => a.toLowerCase().includes(q))) return true;
+          return false;
+        });
+      }
+
+      // ── Pack list rendering ───────────────────────────────────
+      function renderPackList(packs) {
+        if (packs.length === 0) {
+          const hasQuery = packSearch.value.trim();
+          packListState.textContent = hasQuery
+            ? "No packs match your filter."
+            : "No saved packs yet. Generate one above.";
+          packListState.className = "state-msg";
+          packListState.style.display = "";
+          packListEl.style.display = "none";
+          return;
+        }
+
+        packListState.style.display = "none";
+        packListEl.innerHTML = "";
+        packListEl.style.display = "";
+
+        for (const pack of packs) {
+          const li = document.createElement("li");
+          li.className = "pack-item" + (pack.id === selectedId ? " selected" : "");
+          li.dataset.id = pack.id;
+
+          const safeConfidence = CONFIDENCE_VALUES.includes(pack.confidence) ? pack.confidence : "low";
+          const confidenceClass = "badge badge-" + safeConfidence;
+
+          li.innerHTML = `
+            <div class="pack-item-objective">${escapeHtml(pack.objective)}</div>
+            ${pack.goal ? `<div class="pack-item-goal">${escapeHtml(pack.goal)}</div>` : ""}
+            <div class="pack-item-meta">
+              <span>${escapeHtml(formatDate(pack.createdAt))}</span>
+              <span class="${confidenceClass}">${escapeHtml(pack.confidence)}</span>
+              <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
+            </div>
+          `;
+
+          li.addEventListener("click", () => selectPack(pack));
+          packListEl.appendChild(li);
+        }
+      }
+
+      // ── Pack detail rendering ─────────────────────────────────
+      function selectPack(pack) {
+        selectedId = pack.id;
+
+        // Update selected highlight
+        for (const item of packListEl.querySelectorAll(".pack-item")) {
+          item.classList.toggle("selected", item.dataset.id === pack.id);
+        }
+
+        exportBtn.disabled = false;
+        deleteBtn.disabled = false;
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        detailCard.style.display = "";
+        detailContent.innerHTML = `
+          <div class="detail-meta">
+            <span>ID: ${escapeHtml(pack.id)}</span>
+            <span>Created: ${escapeHtml(formatDate(pack.createdAt))}</span>
+            <span class="badge badge-${CONFIDENCE_VALUES.includes(pack.confidence) ? pack.confidence : "low"}">${escapeHtml(pack.confidence)} confidence</span>
+            <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
+          </div>
+
+          <div class="detail-section">
+            <h3>Original Goal</h3>
+            <p class="detail-text">${
+              pack.goal ? escapeHtml(pack.goal) : "<em class='muted'>Not available for older packs</em>"
+            }</p>
+          </div>
+
+          ${pack.repositoryContext ? `
+          <div class="detail-section">
+            <h3>Repository Context</h3>
+            <p class="detail-text">${escapeHtml(pack.repositoryContext)}</p>
+          </div>` : ""}
+
+          <div class="detail-objective">${escapeHtml(pack.objective)}</div>
+
+          <div class="detail-section">
+            <h3>Constraints</h3>
+            <ul>${renderList(pack.constraints)}</ul>
+
+            <h3>Acceptance Criteria</h3>
+            <ul>${renderList(pack.acceptanceCriteria)}</ul>
+
+            <h3>Non-Goals</h3>
+            <ul>${renderList(pack.nonGoals)}</ul>
+
+            <h3>Touched Areas</h3>
+            <ul>${renderList(pack.touchedAreas)}</ul>
+
+            <h3>Risks</h3>
+            <ul>${renderList(pack.risks)}</ul>
+
+            <h3>Open Questions</h3>
+            <ul>${renderList(pack.openQuestions)}</ul>
+          </div>
+        `;
+      }
+
+      function clearDetail() {
+        selectedId = null;
+        detailCard.style.display = "none";
+        exportBtn.disabled = true;
+        deleteBtn.disabled = true;
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+      }
+
+      // ── Load packs from API ───────────────────────────────────
+      async function loadPacks() {
+        packListState.textContent = "Loading…";
+        packListState.className = "state-msg";
+        packListState.style.display = "";
+        packListEl.style.display = "none";
+
+        try {
+          const res = await fetch("/api/intent-packs");
+          if (!res.ok) throw new Error("Server returned " + res.status);
+          allPacks = await res.json();
+          const filtered = getFilteredPacks();
+          renderPackList(filtered);
+          // Auto-select newest pack if none selected yet
+          if (!selectedId && filtered.length > 0) {
+            selectPack(filtered[0]);
+          }
+        } catch (err) {
+          packListState.textContent = "Failed to load saved packs: " + (err.message || "unknown error");
+          packListState.className = "state-msg error";
+          packListState.style.display = "";
+          packListEl.style.display = "none";
+        }
+      }
+
+      // ── Search/filter ─────────────────────────────────────────
+      packSearch.addEventListener("input", () => {
+        const filtered = getFilteredPacks();
+        renderPackList(filtered);
+        // Clear selection when the selected pack is filtered out
+        if (selectedId && !filtered.some(p => p.id === selectedId)) {
+          clearDetail();
+        }
+      });
+
+      // ── Generate & save ───────────────────────────────────────
+      generateBtn.addEventListener("click", async () => {
         const goal = goalInput.value.trim();
         const repositoryContext = contextInput.value.trim();
 
         if (!goal) {
-          output.textContent = "Please enter a feature request first.";
+          generateError.textContent = "Please enter a feature request first.";
+          generateError.style.display = "";
           return;
         }
 
-        output.textContent = "Generating...";
-        issueOutput.textContent = "Generating...";
+        generateError.style.display = "none";
+        generateBtn.disabled = true;
+        generateBtn.textContent = "Generating…";
 
-        const response = await fetch("/api/intent-pack/export-issue", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ goal, repositoryContext })
-        });
+        try {
+          const res = await fetch("/api/intent-pack", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ goal, repositoryContext: repositoryContext || undefined })
+          });
 
-        const data = await response.json();
-        output.textContent = JSON.stringify(data.pack, null, 2);
-        issueOutput.textContent = data.markdown;
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Server error");
+          }
+
+          const saved = await res.json();
+
+          // Re-fetch list to stay in sync, then select the new pack
+          selectedId = saved.id;
+          await loadPacks();
+          selectPack(saved);
+
+          goalInput.value = "";
+          contextInput.value = "";
+        } catch (err) {
+          generateError.textContent = "Error: " + (err.message || "unknown error");
+          generateError.style.display = "";
+        } finally {
+          generateBtn.disabled = false;
+          generateBtn.textContent = "Generate & Save Intent Pack";
+        }
       });
+
+      // ── Export: Copy as GitHub Issue ─────────────────────────
+      exportBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+
+        exportBtn.disabled = true;
+        exportBtn.textContent = "Copying…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/export-issue");
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Server error (" + res.status + ")");
+          }
+          const { markdown } = await res.json();
+
+          try {
+            await navigator.clipboard.writeText(markdown);
+            exportStatus.textContent = "✓ Copied to clipboard";
+            exportStatus.className = "export-status success";
+          } catch (_) {
+            // Clipboard API unavailable — show the text for manual copy
+            exportStatus.textContent = "Clipboard unavailable — markdown logged to console";
+            exportStatus.className = "export-status error";
+            console.log("GitHub Issue Markdown:\n\n" + markdown);
+          }
+        } catch (err) {
+          exportStatus.textContent = "Export failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          exportBtn.disabled = false;
+          exportBtn.textContent = "Copy as GitHub Issue";
+        }
+      });
+
+      // ── Delete pack ───────────────────────────────────────────
+      deleteBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+        if (!window.confirm("Delete this pack? This cannot be undone.")) return;
+
+        const idToDelete = selectedId;
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = "Deleting…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(idToDelete), {
+            method: "DELETE"
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Delete failed (" + res.status + ")");
+          }
+
+          clearDetail();
+          await loadPacks();
+        } catch (err) {
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = "Delete";
+          exportStatus.textContent = "Delete failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        }
+      });
+
+      // ── Boot ─────────────────────────────────────────────────
+      loadPacks();
     </script>
   </body>
 </html>

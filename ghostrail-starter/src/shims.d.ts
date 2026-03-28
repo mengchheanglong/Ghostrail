@@ -6,7 +6,16 @@ declare module "node:http" {
 }
 
 declare module "node:fs/promises" {
-  export function readFile(path: string): Promise<any>;
+  export function readFile(path: string, encoding?: string): Promise<any>;
+  export function writeFile(path: string, data: string, encoding?: string): Promise<void>;
+  export function mkdir(path: string, options?: { recursive?: boolean }): Promise<any>;
+  export function readdir(path: string): Promise<string[]>;
+  export function mkdtemp(prefix: string): Promise<string>;
+  export function rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>;
+}
+
+declare module "node:os" {
+  export function tmpdir(): string;
 }
 
 declare module "node:path" {

@@ -14,3 +14,10 @@ export interface IntentPack {
   confidence: "low" | "medium" | "high";
   reasoningMode: "heuristic" | "llm";
 }
+
+export interface StoredIntentPack extends IntentPack {
+  id: string;
+  createdAt: string;
+  goal?: string;
+  repositoryContext?: string;
+}
