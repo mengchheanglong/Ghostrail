@@ -229,11 +229,22 @@
         color: #fca5a5;
         border-color: rgba(248, 113, 113, 0.3) !important;
       }
+      .btn-rerun {
+        color: #a5b4fc;
+        border-color: rgba(99, 102, 241, 0.3) !important;
+      }
       .export-status {
         font-size: 0.85rem;
       }
       .export-status.success { color: #6ee7b7; }
       .export-status.error   { color: #fca5a5; }
+
+      /* ── Draft hint ── */
+      .draft-hint {
+        font-size: 0.82rem;
+        color: #6ee7b7;
+        margin: 6px 0 0;
+      }
     </style>
   </head>
   <body>
@@ -249,6 +260,7 @@
         <textarea id="goal" placeholder="Example: Add subscription upgrade flow but do not break current billing or admin behavior."></textarea>
         <textarea id="context" placeholder="Optional repository context: tech stack, sensitive areas, business rules..."></textarea>
         <button id="generate">Generate &amp; Save Intent Pack</button>
+        <p id="draftHint" class="draft-hint" style="display:none">↑ Loaded inputs from saved pack — edit freely then generate.</p>
         <p id="generateError" class="state-msg error" style="display:none"></p>
       </div>
 
@@ -269,6 +281,7 @@
           <div id="detailCard" class="card" style="margin-top:0; display:none">
             <div id="detailActions" class="detail-actions">
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
+              <button id="rerunBtn" class="btn-rerun" disabled>Re-run from this pack</button>
               <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
               <span id="exportStatus" class="export-status"></span>
             </div>
@@ -284,18 +297,21 @@
       const contextInput   = document.getElementById("context");
       const generateBtn    = document.getElementById("generate");
       const generateError  = document.getElementById("generateError");
+      const draftHint      = document.getElementById("draftHint");
       const packListEl     = document.getElementById("packList");
       const packListState  = document.getElementById("packListState");
       const packSearch     = document.getElementById("packSearch");
       const detailCard     = document.getElementById("detailCard");
       const detailContent  = document.getElementById("detailContent");
       const exportBtn      = document.getElementById("exportBtn");
+      const rerunBtn       = document.getElementById("rerunBtn");
       const deleteBtn      = document.getElementById("deleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
 
-      // Track the currently selected pack id and the full unfiltered list
-      let selectedId = null;
-      let allPacks   = [];
+      // Track the currently selected pack id, full object, and the full unfiltered list
+      let selectedId   = null;
+      let selectedPack = null;
+      let allPacks     = [];
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
@@ -378,7 +394,8 @@
 
       // ── Pack detail rendering ─────────────────────────────────
       function selectPack(pack) {
-        selectedId = pack.id;
+        selectedId   = pack.id;
+        selectedPack = pack;
 
         // Update selected highlight
         for (const item of packListEl.querySelectorAll(".pack-item")) {
@@ -386,6 +403,8 @@
         }
 
         exportBtn.disabled = false;
+        rerunBtn.disabled  = !pack.goal;
+        rerunBtn.title     = pack.goal ? "" : "No original goal stored for this pack";
         deleteBtn.disabled = false;
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
@@ -437,12 +456,26 @@
       }
 
       function clearDetail() {
-        selectedId = null;
+        selectedId   = null;
+        selectedPack = null;
         detailCard.style.display = "none";
         exportBtn.disabled = true;
+        rerunBtn.disabled  = true;
+        rerunBtn.title     = "";
         deleteBtn.disabled = true;
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
+      }
+
+      // ── Prefill generator form from a saved pack ─────────────
+      function prefillFromPack(pack) {
+        goalInput.value    = pack.goal || "";
+        contextInput.value = pack.repositoryContext || "";
+        generateError.style.display = "none";
+        draftHint.style.display = "";
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        goalInput.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+        goalInput.focus();
       }
 
       // ── Load packs from API ───────────────────────────────────
@@ -478,6 +511,12 @@
         if (selectedId && !filtered.some(p => p.id === selectedId)) {
           clearDetail();
         }
+      });
+
+      // ── Re-run from saved pack ────────────────────────────────
+      rerunBtn.addEventListener("click", () => {
+        if (!selectedPack || !selectedPack.goal) return;
+        prefillFromPack(selectedPack);
       });
 
       // ── Generate & save ───────────────────────────────────────
@@ -516,6 +555,7 @@
 
           goalInput.value = "";
           contextInput.value = "";
+          draftHint.style.display = "none";
         } catch (err) {
           generateError.textContent = "Error: " + (err.message || "unknown error");
           generateError.style.display = "";

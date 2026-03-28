@@ -9,30 +9,6 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-### B1 — Persist repositoryContext
-- Value: preserves more generation context
-- Scope: stored type, save path, read path, detail UI, tests
-- Risk: low
-- Verification: build + tests + manual UI check
-
-### B2 — Search/filter saved packs
-- Value: improves usability once pack count grows
-- Scope: client-side filter only
-- Risk: low
-- Verification: manual UI check + build
-
-### B3 — Delete saved pack
-- Value: pack lifecycle management
-- Scope: delete endpoint + UI delete action + tests
-- Risk: medium
-- Verification: create, delete, verify absence
-
-### B4 — Responsive mobile layout
-- Value: makes UI usable on narrow screens
-- Scope: CSS/layout only
-- Risk: low
-- Verification: manual responsive check
-
 ### B5 — Export route integration coverage
 - Value: reliability
 - Scope: test only
@@ -47,3 +23,18 @@ Move an item here if it needs user/product input.
 
 ## Done
 Move completed items here with short completion notes.
+
+### B1 — Persist repositoryContext
+- Completed: repositoryContext is saved and surfaced in list, detail, and export views.
+
+### B2 — Search/filter saved packs
+- Completed: client-side filter on goal, objective, and touchedAreas.
+
+### B3 — Delete saved pack
+- Completed: DELETE endpoint + UI confirmation + tests.
+
+### B4 — Responsive mobile layout
+- Completed: flex stack on screens ≤640px.
+
+### B6 — Re-run from saved pack
+- Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
