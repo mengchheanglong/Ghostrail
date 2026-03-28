@@ -391,6 +391,48 @@
         color: #9ca3af;
         opacity: 0.7;
       }
+
+      /* ── Star and archive controls ── */
+      .btn-star {
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.3) !important;
+      }
+      .btn-archive {
+        color: #9ca3af;
+        border-color: rgba(156, 163, 175, 0.2) !important;
+      }
+      .star-indicator {
+        color: #fbbf24;
+        font-size: 0.78rem;
+      }
+      .archived-indicator {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        background: rgba(156, 163, 175, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .pack-item-archived {
+        opacity: 0.45;
+      }
+      .show-archived-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0 2px;
+        font-size: 0.8rem;
+        color: #9ca3af;
+        cursor: pointer;
+        user-select: none;
+      }
+      .show-archived-row input[type="checkbox"] {
+        cursor: pointer;
+        accent-color: #6366f1;
+        width: auto;
+        margin: 0;
+        padding: 0;
+        border: none;
+      }
     </style>
   </head>
   <body>
@@ -417,6 +459,10 @@
           <div class="card" style="margin-top:0">
             <h2>Saved Packs</h2>
             <input type="search" id="packSearch" class="pack-search" placeholder="Filter packs…" />
+            <label class="show-archived-row">
+              <input type="checkbox" id="showArchivedToggle" />
+              Show archived
+            </label>
             <div id="packListState" class="state-msg">Loading…</div>
             <ul id="packList" class="pack-list" style="display:none"></ul>
           </div>
@@ -429,10 +475,47 @@
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
               <button id="rerunBtn" class="btn-rerun" disabled>Re-run from this pack</button>
               <button id="duplicateBtn" class="btn-duplicate" disabled>Duplicate pack</button>
+              <button id="starBtn" class="btn-star" disabled>☆ Star</button>
+              <button id="archiveBtn" class="btn-archive" disabled>Archive</button>
               <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
               <button id="cancelDeleteBtn" class="btn-cancel" style="display:none">Cancel</button>
               <span id="exportStatus" class="export-status"></span>
             </div>
+
+            <!-- Goal section (editable) -->
+            <div id="goalSection" style="display:none">
+              <div class="section-heading-row">
+                <h3>Original Goal</h3>
+                <button id="editGoalBtn" class="btn-small">Edit</button>
+              </div>
+              <p id="goalDisplay" class="detail-text"></p>
+              <div id="goalEditor" style="display:none">
+                <textarea id="goalEditInput" class="notes-textarea" placeholder="Enter feature goal…"></textarea>
+                <p id="goalEditError" class="state-msg error" style="display:none"></p>
+                <div class="notes-editor-actions">
+                  <button id="saveGoalBtn">Save goal</button>
+                  <button id="cancelGoalBtn" class="btn-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Repository Context section (editable) -->
+            <div id="contextSection" style="display:none">
+              <div class="section-heading-row">
+                <h3>Repository Context</h3>
+                <button id="editContextBtn" class="btn-small">Edit</button>
+              </div>
+              <p id="contextDisplay" class="detail-text"></p>
+              <div id="contextEditor" style="display:none">
+                <textarea id="contextEditInput" class="notes-textarea" placeholder="Optional repository context…"></textarea>
+                <p id="contextEditError" class="state-msg error" style="display:none"></p>
+                <div class="notes-editor-actions">
+                  <button id="saveContextBtn">Save context</button>
+                  <button id="cancelContextBtn" class="btn-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+
             <div id="detailContent"></div>
 
             <!-- Notes section -->
@@ -484,6 +567,25 @@
       const deleteBtn      = document.getElementById("deleteBtn");
       const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
+      const showArchivedToggle = document.getElementById("showArchivedToggle");
+      const starBtn        = document.getElementById("starBtn");
+      const archiveBtn     = document.getElementById("archiveBtn");
+      const goalSection    = document.getElementById("goalSection");
+      const goalDisplay    = document.getElementById("goalDisplay");
+      const goalEditor     = document.getElementById("goalEditor");
+      const goalEditInput  = document.getElementById("goalEditInput");
+      const goalEditError  = document.getElementById("goalEditError");
+      const editGoalBtn    = document.getElementById("editGoalBtn");
+      const saveGoalBtn    = document.getElementById("saveGoalBtn");
+      const cancelGoalBtn  = document.getElementById("cancelGoalBtn");
+      const contextSection   = document.getElementById("contextSection");
+      const contextDisplay   = document.getElementById("contextDisplay");
+      const contextEditor    = document.getElementById("contextEditor");
+      const contextEditInput = document.getElementById("contextEditInput");
+      const contextEditError = document.getElementById("contextEditError");
+      const editContextBtn   = document.getElementById("editContextBtn");
+      const saveContextBtn   = document.getElementById("saveContextBtn");
+      const cancelContextBtn = document.getElementById("cancelContextBtn");
       const notesSection   = document.getElementById("notesSection");
       const notesDisplay   = document.getElementById("notesDisplay");
       const notesEditor    = document.getElementById("notesEditor");
@@ -502,11 +604,22 @@
       let selectedPack = null;
       let allPacks     = [];
       let pendingDelete = false;
+      let showArchived  = false;
 
       const GOAL_PREVIEW_MAX_LEN = 60;
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
+
+      function updateRerunBtn(pack) {
+        rerunBtn.disabled = !pack.goal;
+        rerunBtn.title = pack.goal ? "" : "No original goal stored for this pack";
+      }
+
+      function updateCurationBtns(pack) {
+        starBtn.textContent = pack.starred ? "★ Unstar" : "☆ Star";
+        archiveBtn.textContent = pack.archived ? "Unarchive" : "Archive";
+      }
 
       function formatDate(iso) {
         try {
@@ -535,13 +648,15 @@
       // ── Client-side filter ────────────────────────────────────
       function getFilteredPacks() {
         const q = packSearch.value.trim().toLowerCase();
-        if (!q) return allPacks;
         return allPacks.filter(p => {
+          if (p.archived && !showArchived) return false;
+          if (!q) return true;
           if (p.goal && p.goal.toLowerCase().includes(q)) return true;
           if (p.objective.toLowerCase().includes(q)) return true;
           if (Array.isArray(p.touchedAreas) && p.touchedAreas.some(a => a.toLowerCase().includes(q))) return true;
           if (p.notes && p.notes.toLowerCase().includes(q)) return true;
           if (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q))) return true;
+          if (p.repositoryContext && p.repositoryContext.toLowerCase().includes(q)) return true;
           return false;
         });
       }
@@ -555,6 +670,7 @@
             : "No saved packs yet. Generate one above.";
           packListState.className = "state-msg";
           packListState.style.display = "";
+          packListEl.innerHTML = "";
           packListEl.style.display = "none";
           return;
         }
@@ -565,7 +681,7 @@
 
         for (const pack of packs) {
           const li = document.createElement("li");
-          li.className = "pack-item" + (pack.id === selectedId ? " selected" : "");
+          li.className = "pack-item" + (pack.id === selectedId ? " selected" : "") + (pack.archived ? " pack-item-archived" : "");
           li.dataset.id = pack.id;
 
           const safeConfidence = CONFIDENCE_VALUES.includes(pack.confidence) ? pack.confidence : "low";
@@ -579,6 +695,8 @@
               <span class="${confidenceClass}">${escapeHtml(pack.confidence)}</span>
               <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
               ${pack.notes ? `<span class="note-indicator">✎</span>` : ""}
+              ${pack.starred ? `<span class="star-indicator">★</span>` : ""}
+              ${pack.archived ? `<span class="archived-indicator">archived</span>` : ""}
             </div>
             ${Array.isArray(pack.tags) && pack.tags.length > 0
               ? `<div class="pack-item-tags">${pack.tags.map(t => `<span class="badge badge-tag">${escapeHtml(t)}</span>`).join("")}</div>`
@@ -591,6 +709,33 @@
       }
 
       // ── Pack detail rendering ─────────────────────────────────
+      function renderGoalSection(pack) {
+        goalSection.style.display = "";
+        goalEditor.style.display = "none";
+        editGoalBtn.style.display = "";
+        goalEditError.style.display = "none";
+        if (pack.goal) {
+          goalDisplay.textContent = pack.goal;
+          goalDisplay.className = "detail-text";
+        } else {
+          goalDisplay.textContent = "Not available for older packs.";
+          goalDisplay.className = "detail-text muted";
+        }
+      }
+
+      function renderContextSection(pack) {
+        contextSection.style.display = "";
+        contextEditor.style.display = "none";
+        editContextBtn.style.display = "";
+        if (pack.repositoryContext) {
+          contextDisplay.textContent = pack.repositoryContext;
+          contextDisplay.className = "detail-text";
+        } else {
+          contextDisplay.textContent = "No repository context.";
+          contextDisplay.className = "detail-text muted";
+        }
+      }
+
       function renderNotesSection(pack) {
         notesSection.style.display = "";
         notesEditor.style.display = "none";
@@ -638,12 +783,14 @@
         }
 
         exportBtn.disabled = false;
-        rerunBtn.disabled  = !pack.goal;
-        rerunBtn.title     = pack.goal ? "" : "No original goal stored for this pack";
+        updateRerunBtn(pack);
         duplicateBtn.disabled = false;
+        starBtn.disabled = false;
+        archiveBtn.disabled = false;
         deleteBtn.disabled = false;
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
+        updateCurationBtns(pack);
 
         detailCard.style.display = "";
         detailContent.innerHTML = `
@@ -653,19 +800,6 @@
             <span class="badge badge-${CONFIDENCE_VALUES.includes(pack.confidence) ? pack.confidence : "low"}">${escapeHtml(pack.confidence)} confidence</span>
             <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
           </div>
-
-          <div class="detail-section">
-            <h3>Original Goal</h3>
-            <p class="detail-text">${
-              pack.goal ? escapeHtml(pack.goal) : "<em class='muted'>Not available for older packs</em>"
-            }</p>
-          </div>
-
-          ${pack.repositoryContext ? `
-          <div class="detail-section">
-            <h3>Repository Context</h3>
-            <p class="detail-text">${escapeHtml(pack.repositoryContext)}</p>
-          </div>` : ""}
 
           <div class="detail-objective">${escapeHtml(pack.objective)}</div>
 
@@ -690,6 +824,8 @@
           </div>
         `;
 
+        renderGoalSection(pack);
+        renderContextSection(pack);
         renderNotesSection(pack);
         renderTagsSection(pack);
       }
@@ -703,11 +839,21 @@
         rerunBtn.disabled  = true;
         rerunBtn.title     = "";
         duplicateBtn.disabled = true;
+        starBtn.disabled = true;
+        starBtn.textContent = "☆ Star";
+        archiveBtn.disabled = true;
+        archiveBtn.textContent = "Archive";
         deleteBtn.disabled = true;
         deleteBtn.textContent = "Delete";
         cancelDeleteBtn.style.display = "none";
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
+        goalSection.style.display = "none";
+        goalEditor.style.display = "none";
+        goalEditError.style.display = "none";
+        contextSection.style.display = "none";
+        contextEditor.style.display = "none";
+        contextEditError.style.display = "none";
         notesSection.style.display = "none";
         notesEditor.style.display = "none";
         tagsSection.style.display = "none";
@@ -928,6 +1074,106 @@
         }
       });
 
+      // ── Goal editing ──────────────────────────────────────────
+      editGoalBtn.addEventListener("click", () => {
+        goalEditInput.value = selectedPack?.goal || "";
+        goalEditor.style.display = "";
+        editGoalBtn.style.display = "none";
+        goalEditError.style.display = "none";
+        goalEditInput.focus();
+      });
+
+      cancelGoalBtn.addEventListener("click", () => {
+        goalEditor.style.display = "none";
+        editGoalBtn.style.display = "";
+        goalEditError.style.display = "none";
+      });
+
+      saveGoalBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        const goal = goalEditInput.value.trim();
+        if (!goal) {
+          goalEditError.textContent = "Goal must not be empty.";
+          goalEditError.style.display = "";
+          return;
+        }
+        goalEditError.style.display = "none";
+        saveGoalBtn.disabled = true;
+        saveGoalBtn.textContent = "Saving…";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ goal })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Save failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          updateRerunBtn(updated);
+          renderGoalSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          goalEditError.textContent = "Save failed: " + (err.message || "unknown error");
+          goalEditError.style.display = "";
+        } finally {
+          saveGoalBtn.disabled = false;
+          saveGoalBtn.textContent = "Save goal";
+        }
+      });
+
+      // ── Repository Context editing ────────────────────────────
+      editContextBtn.addEventListener("click", () => {
+        contextEditInput.value = selectedPack?.repositoryContext || "";
+        contextEditor.style.display = "";
+        editContextBtn.style.display = "none";
+        contextEditError.style.display = "none";
+        contextEditInput.focus();
+      });
+
+      cancelContextBtn.addEventListener("click", () => {
+        contextEditor.style.display = "none";
+        editContextBtn.style.display = "";
+        contextEditError.style.display = "none";
+      });
+
+      saveContextBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        const repositoryContext = contextEditInput.value.trim();
+        contextEditError.style.display = "none";
+        saveContextBtn.disabled = true;
+        saveContextBtn.textContent = "Saving…";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ repositoryContext })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Save failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          renderContextSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          contextEditError.textContent = "Save failed: " + (err.message || "unknown error");
+          contextEditError.style.display = "";
+        } finally {
+          saveContextBtn.disabled = false;
+          saveContextBtn.textContent = "Save context";
+        }
+      });
+
       // ── Notes editing ─────────────────────────────────────────
       editNotesBtn.addEventListener("click", () => {
         notesInput.value = selectedPack?.notes || "";
@@ -1038,6 +1284,78 @@
         } catch (err) {
           tagError.textContent = "Remove tag failed: " + (err.message || "unknown error");
           tagError.style.display = "";
+        }
+      });
+
+      // ── Show archived toggle ─────────────────────────────────
+      showArchivedToggle.addEventListener("change", () => {
+        showArchived = showArchivedToggle.checked;
+        const filtered = getFilteredPacks();
+        renderPackList(filtered);
+        if (selectedId && !filtered.some(p => p.id === selectedId)) {
+          clearDetail();
+        }
+      });
+
+      // ── Star / unstar pack ────────────────────────────────────
+      starBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        starBtn.disabled = true;
+        const newStarred = !selectedPack.starred;
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ starred: newStarred })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Star failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          updateCurationBtns(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          exportStatus.textContent = "Star failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          starBtn.disabled = false;
+        }
+      });
+
+      // ── Archive / unarchive pack ──────────────────────────────
+      archiveBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        archiveBtn.disabled = true;
+        const newArchived = !selectedPack.archived;
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ archived: newArchived })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Archive failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          updateCurationBtns(updated);
+          renderPackList(getFilteredPacks());
+          // If archived and "show archived" is off, pack disappears — clear detail
+          if (updated.archived && !showArchived) {
+            clearDetail();
+          }
+        } catch (err) {
+          exportStatus.textContent = "Archive failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          archiveBtn.disabled = false;
         }
       });
 

@@ -305,6 +305,161 @@ test("PATCH /api/intent-packs/:id returns 404 for a non-existent valid-format uu
   });
 });
 
+// ── PATCH goal and repositoryContext route tests ──────────────
+
+test("PATCH /api/intent-packs/:id updates goal on an existing pack", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Original goal text" });
+    const stored = await saveIntentPack(pack, "Original goal text", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Updated goal text" })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["goal"], "Updated goal text");
+  });
+});
+
+test("PATCH /api/intent-packs/:id updates repositoryContext on an existing pack", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack for context update" });
+    const stored = await saveIntentPack(pack, "Pack for context update", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repositoryContext: "Node.js backend, no DB changes" })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["repositoryContext"], "Node.js backend, no DB changes");
+  });
+});
+
+test("PATCH /api/intent-packs/:id trims goal and repositoryContext before storing", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack for trim test" });
+    const stored = await saveIntentPack(pack, "Pack for trim test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "  Trimmed goal  ", repositoryContext: "  Trimmed context  " })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["goal"], "Trimmed goal");
+    assert.equal((body as Record<string, unknown>)["repositoryContext"], "Trimmed context");
+  });
+});
+
+test("PATCH /api/intent-packs/:id with blank repositoryContext removes the field", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack to clear context" });
+    const stored = await saveIntentPack(pack, "Pack to clear context", "Some context", dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repositoryContext: "   " })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["repositoryContext"], undefined, "repositoryContext should be absent when set to blank");
+  });
+});
+
+test("PATCH /api/intent-packs/:id rejects empty goal with 400", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack for empty goal test" });
+    const stored = await saveIntentPack(pack, "Pack for empty goal test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "" })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "goal must not be empty");
+  });
+});
+
+test("PATCH /api/intent-packs/:id rejects whitespace-only goal with 400", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack for whitespace goal test" });
+    const stored = await saveIntentPack(pack, "Pack for whitespace goal test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "   " })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "goal must not be empty");
+  });
+});
+
+test("PATCH /api/intent-packs/:id rejects non-string goal with 400", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack for bad goal type test" });
+    const stored = await saveIntentPack(pack, "Pack for bad goal type test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: 123 })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "goal must be a string");
+  });
+});
+
+test("PATCH /api/intent-packs/:id rejects non-string repositoryContext with 400", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack for bad context type test" });
+    const stored = await saveIntentPack(pack, "Pack for bad context type test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repositoryContext: 42 })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "repositoryContext must be a string");
+  });
+});
+
 // ── Duplicate route tests ────────────────────────────────────
 
 test("POST /api/intent-packs/:id/duplicate creates a new pack with preserved content", async () => {
@@ -378,5 +533,83 @@ test("POST /api/intent-packs/:id/duplicate leaves the original unchanged", async
     const { status, body } = await fetchJson(`${baseUrl}/api/intent-packs/${stored.id}`);
     assert.equal(status, 200);
     assert.equal((body as Record<string, unknown>)["id"], stored.id, "original id unchanged");
+  });
+});
+
+// ── PATCH starred and archived route tests ───────────────────
+
+test("PATCH /api/intent-packs/:id sets starred to true", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack to star via HTTP" });
+    const stored = await saveIntentPack(pack, "Pack to star via HTTP", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ starred: true })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["starred"], true);
+  });
+});
+
+test("PATCH /api/intent-packs/:id sets archived to true", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack to archive via HTTP" });
+    const stored = await saveIntentPack(pack, "Pack to archive via HTTP", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: true })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["archived"], true);
+  });
+});
+
+test("PATCH /api/intent-packs/:id returns 400 for non-boolean starred", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Bad starred type" });
+    const stored = await saveIntentPack(pack, "Bad starred type", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ starred: "yes" })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "starred must be a boolean");
+  });
+});
+
+test("PATCH /api/intent-packs/:id returns 400 for non-boolean archived", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Bad archived type" });
+    const stored = await saveIntentPack(pack, "Bad archived type", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: 1 })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "archived must be a boolean");
   });
 });
