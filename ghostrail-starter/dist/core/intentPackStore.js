@@ -1,14 +1,14 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 // Resolves to <project-root>/data/intent-packs when running from dist/core/
-const defaultDataDir = join(__dirname, "..", "..", "data", "intent-packs");
+export const defaultDataDir = join(__dirname, "..", "..", "data", "intent-packs");
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function ensureDir(dir) {
     await mkdir(dir, { recursive: true });
 }
-export async function saveIntentPack(pack, goal, dataDir) {
+export async function saveIntentPack(pack, goal, repositoryContext, dataDir) {
     const dir = dataDir ?? defaultDataDir;
     await ensureDir(dir);
     const id = crypto.randomUUID();
@@ -17,6 +17,7 @@ export async function saveIntentPack(pack, goal, dataDir) {
         id,
         createdAt,
         ...(goal !== undefined ? { goal } : {}),
+        ...(repositoryContext !== undefined ? { repositoryContext } : {}),
         ...pack,
     };
     await writeFile(join(dir, `${id}.json`), JSON.stringify(stored, null, 2), "utf8");
@@ -54,5 +55,16 @@ export async function getIntentPackById(id, dataDir = defaultDataDir) {
     }
     catch {
         return null;
+    }
+}
+export async function deleteIntentPack(id, dataDir = defaultDataDir) {
+    if (!uuidPattern.test(id))
+        return false;
+    try {
+        await rm(join(dataDir, `${id}.json`));
+        return true;
+    }
+    catch {
+        return false;
     }
 }

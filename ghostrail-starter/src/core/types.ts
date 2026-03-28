@@ -19,4 +19,5 @@ export interface StoredIntentPack extends IntentPack {
   id: string;
   createdAt: string;
   goal?: string;
+  repositoryContext?: string;
 }

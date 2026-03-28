@@ -83,10 +83,38 @@
         min-width: 0;
       }
 
+      /* ── Responsive: stack on narrow screens ── */
+      @media (max-width: 640px) {
+        .layout {
+          flex-direction: column;
+        }
+        .sidebar {
+          width: 100%;
+        }
+      }
+
+      /* ── Search input ── */
+      .pack-search {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+        color: inherit;
+        padding: 8px 12px;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 0.85rem;
+        margin: 8px 0 4px;
+      }
+      .pack-search:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+
       /* ── Pack list ── */
       .pack-list {
         list-style: none;
-        margin: 12px 0 0;
+        margin: 8px 0 0;
         padding: 0;
         display: flex;
         flex-direction: column;
@@ -111,6 +139,14 @@
         font-size: 0.9rem;
         font-weight: 600;
         word-break: break-word;
+        margin-bottom: 2px;
+      }
+      .pack-item-goal {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         margin-bottom: 6px;
       }
       .pack-item-meta {
@@ -157,6 +193,13 @@
         font-weight: 600;
         margin: 4px 0 12px;
       }
+      .detail-text {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #d1d5db;
+        margin: 4px 0 12px;
+        word-break: break-word;
+      }
       .detail-section ul {
         margin: 4px 0 12px;
         padding-left: 18px;
@@ -167,12 +210,13 @@
         color: #d1d5db;
       }
 
-      /* ── Export action row ── */
+      /* ── Action row ── */
       .detail-actions {
         display: flex;
         align-items: center;
         gap: 12px;
         margin-bottom: 14px;
+        flex-wrap: wrap;
       }
       .detail-actions button {
         width: auto;
@@ -180,6 +224,10 @@
         padding: 8px 16px;
         font-size: 0.85rem;
         font-weight: 600;
+      }
+      .btn-danger {
+        color: #fca5a5;
+        border-color: rgba(248, 113, 113, 0.3) !important;
       }
       .export-status {
         font-size: 0.85rem;
@@ -210,6 +258,7 @@
         <div class="sidebar">
           <div class="card" style="margin-top:0">
             <h2>Saved Packs</h2>
+            <input type="search" id="packSearch" class="pack-search" placeholder="Filter packs…" />
             <div id="packListState" class="state-msg">Loading…</div>
             <ul id="packList" class="pack-list" style="display:none"></ul>
           </div>
@@ -220,6 +269,7 @@
           <div id="detailCard" class="card" style="margin-top:0; display:none">
             <div id="detailActions" class="detail-actions">
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
+              <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
               <span id="exportStatus" class="export-status"></span>
             </div>
             <div id="detailContent"></div>
@@ -236,16 +286,20 @@
       const generateError  = document.getElementById("generateError");
       const packListEl     = document.getElementById("packList");
       const packListState  = document.getElementById("packListState");
+      const packSearch     = document.getElementById("packSearch");
       const detailCard     = document.getElementById("detailCard");
       const detailContent  = document.getElementById("detailContent");
       const exportBtn      = document.getElementById("exportBtn");
+      const deleteBtn      = document.getElementById("deleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
 
-      // Track the currently selected pack id
+      // Track the currently selected pack id and the full unfiltered list
       let selectedId = null;
+      let allPacks   = [];
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
+
       function formatDate(iso) {
         try {
           return new Date(iso).toLocaleString(undefined, {
@@ -270,10 +324,25 @@
         return items.map(item => `<li>${escapeHtml(item)}</li>`).join("");
       }
 
+      // ── Client-side filter ────────────────────────────────────
+      function getFilteredPacks() {
+        const q = packSearch.value.trim().toLowerCase();
+        if (!q) return allPacks;
+        return allPacks.filter(p => {
+          if (p.goal && p.goal.toLowerCase().includes(q)) return true;
+          if (p.objective.toLowerCase().includes(q)) return true;
+          if (Array.isArray(p.touchedAreas) && p.touchedAreas.some(a => a.toLowerCase().includes(q))) return true;
+          return false;
+        });
+      }
+
       // ── Pack list rendering ───────────────────────────────────
       function renderPackList(packs) {
         if (packs.length === 0) {
-          packListState.textContent = "No saved packs yet. Generate one above.";
+          const hasQuery = packSearch.value.trim();
+          packListState.textContent = hasQuery
+            ? "No packs match your filter."
+            : "No saved packs yet. Generate one above.";
           packListState.className = "state-msg";
           packListState.style.display = "";
           packListEl.style.display = "none";
@@ -294,6 +363,7 @@
 
           li.innerHTML = `
             <div class="pack-item-objective">${escapeHtml(pack.objective)}</div>
+            ${pack.goal ? `<div class="pack-item-goal">${escapeHtml(pack.goal)}</div>` : ""}
             <div class="pack-item-meta">
               <span>${escapeHtml(formatDate(pack.createdAt))}</span>
               <span class="${confidenceClass}">${escapeHtml(pack.confidence)}</span>
@@ -316,6 +386,7 @@
         }
 
         exportBtn.disabled = false;
+        deleteBtn.disabled = false;
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
 
@@ -330,10 +401,16 @@
 
           <div class="detail-section">
             <h3>Original Goal</h3>
-            <p style="font-size:0.9rem;line-height:1.6;color:#d1d5db;margin:4px 0 12px;word-break:break-word">${
+            <p class="detail-text">${
               pack.goal ? escapeHtml(pack.goal) : "<em class='muted'>Not available for older packs</em>"
             }</p>
           </div>
+
+          ${pack.repositoryContext ? `
+          <div class="detail-section">
+            <h3>Repository Context</h3>
+            <p class="detail-text">${escapeHtml(pack.repositoryContext)}</p>
+          </div>` : ""}
 
           <div class="detail-objective">${escapeHtml(pack.objective)}</div>
 
@@ -359,6 +436,15 @@
         `;
       }
 
+      function clearDetail() {
+        selectedId = null;
+        detailCard.style.display = "none";
+        exportBtn.disabled = true;
+        deleteBtn.disabled = true;
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+      }
+
       // ── Load packs from API ───────────────────────────────────
       async function loadPacks() {
         packListState.textContent = "Loading…";
@@ -369,11 +455,12 @@
         try {
           const res = await fetch("/api/intent-packs");
           if (!res.ok) throw new Error("Server returned " + res.status);
-          const packs = await res.json();
-          renderPackList(packs);
+          allPacks = await res.json();
+          const filtered = getFilteredPacks();
+          renderPackList(filtered);
           // Auto-select newest pack if none selected yet
-          if (!selectedId && packs.length > 0) {
-            selectPack(packs[0]);
+          if (!selectedId && filtered.length > 0) {
+            selectPack(filtered[0]);
           }
         } catch (err) {
           packListState.textContent = "Failed to load saved packs: " + (err.message || "unknown error");
@@ -382,6 +469,16 @@
           packListEl.style.display = "none";
         }
       }
+
+      // ── Search/filter ─────────────────────────────────────────
+      packSearch.addEventListener("input", () => {
+        const filtered = getFilteredPacks();
+        renderPackList(filtered);
+        // Clear selection when the selected pack is filtered out
+        if (selectedId && !filtered.some(p => p.id === selectedId)) {
+          clearDetail();
+        }
+      });
 
       // ── Generate & save ───────────────────────────────────────
       generateBtn.addEventListener("click", async () => {
@@ -402,7 +499,7 @@
           const res = await fetch("/api/intent-pack", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ goal, repositoryContext })
+            body: JSON.stringify({ goal, repositoryContext: repositoryContext || undefined })
           });
 
           if (!res.ok) {
@@ -461,6 +558,36 @@
         } finally {
           exportBtn.disabled = false;
           exportBtn.textContent = "Copy as GitHub Issue";
+        }
+      });
+
+      // ── Delete pack ───────────────────────────────────────────
+      deleteBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+        if (!window.confirm("Delete this pack? This cannot be undone.")) return;
+
+        const idToDelete = selectedId;
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = "Deleting…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(idToDelete), {
+            method: "DELETE"
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Delete failed (" + res.status + ")");
+          }
+
+          clearDetail();
+          await loadPacks();
+        } catch (err) {
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = "Delete";
+          exportStatus.textContent = "Delete failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
         }
       });
 
