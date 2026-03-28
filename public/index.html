@@ -460,6 +460,7 @@
               <p id="contextDisplay" class="detail-text"></p>
               <div id="contextEditor" style="display:none">
                 <textarea id="contextEditInput" class="notes-textarea" placeholder="Optional repository context…"></textarea>
+                <p id="contextEditError" class="state-msg error" style="display:none"></p>
                 <div class="notes-editor-actions">
                   <button id="saveContextBtn">Save context</button>
                   <button id="cancelContextBtn" class="btn-cancel">Cancel</button>
@@ -530,6 +531,7 @@
       const contextDisplay   = document.getElementById("contextDisplay");
       const contextEditor    = document.getElementById("contextEditor");
       const contextEditInput = document.getElementById("contextEditInput");
+      const contextEditError = document.getElementById("contextEditError");
       const editContextBtn   = document.getElementById("editContextBtn");
       const saveContextBtn   = document.getElementById("saveContextBtn");
       const cancelContextBtn = document.getElementById("cancelContextBtn");
@@ -556,6 +558,11 @@
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
+
+      function updateRerunBtn(pack) {
+        rerunBtn.disabled = !pack.goal;
+        rerunBtn.title = pack.goal ? "" : "No original goal stored for this pack";
+      }
 
       function formatDate(iso) {
         try {
@@ -714,8 +721,7 @@
         }
 
         exportBtn.disabled = false;
-        rerunBtn.disabled  = !pack.goal;
-        rerunBtn.title     = pack.goal ? "" : "No original goal stored for this pack";
+        updateRerunBtn(pack);
         duplicateBtn.disabled = false;
         deleteBtn.disabled = false;
         exportStatus.textContent = "";
@@ -778,6 +784,7 @@
         goalEditError.style.display = "none";
         contextSection.style.display = "none";
         contextEditor.style.display = "none";
+        contextEditError.style.display = "none";
         notesSection.style.display = "none";
         notesEditor.style.display = "none";
         tagsSection.style.display = "none";
@@ -1039,8 +1046,7 @@
           selectedPack = updated;
           const idx = allPacks.findIndex(p => p.id === updated.id);
           if (idx !== -1) allPacks[idx] = updated;
-          rerunBtn.disabled = !updated.goal;
-          rerunBtn.title = updated.goal ? "" : "No original goal stored for this pack";
+          updateRerunBtn(updated);
           renderGoalSection(updated);
           renderPackList(getFilteredPacks());
         } catch (err) {
@@ -1057,17 +1063,20 @@
         contextEditInput.value = selectedPack?.repositoryContext || "";
         contextEditor.style.display = "";
         editContextBtn.style.display = "none";
+        contextEditError.style.display = "none";
         contextEditInput.focus();
       });
 
       cancelContextBtn.addEventListener("click", () => {
         contextEditor.style.display = "none";
         editContextBtn.style.display = "";
+        contextEditError.style.display = "none";
       });
 
       saveContextBtn.addEventListener("click", async () => {
         if (!selectedId || !selectedPack) return;
         const repositoryContext = contextEditInput.value.trim();
+        contextEditError.style.display = "none";
         saveContextBtn.disabled = true;
         saveContextBtn.textContent = "Saving…";
 
@@ -1088,8 +1097,8 @@
           renderContextSection(updated);
           renderPackList(getFilteredPacks());
         } catch (err) {
-          exportStatus.textContent = "Save context failed: " + (err.message || "unknown error");
-          exportStatus.className = "export-status error";
+          contextEditError.textContent = "Save failed: " + (err.message || "unknown error");
+          contextEditError.style.display = "";
         } finally {
           saveContextBtn.disabled = false;
           saveContextBtn.textContent = "Save context";
