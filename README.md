@@ -49,6 +49,7 @@ Not built yet:
 ## Quick start
 
 ```bash
+npm install
 npm run build
 npm start
 ```

@@ -1,0 +1,11 @@
+# Persisted Intent Packs — runtime data, never commit
+data/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
