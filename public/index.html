@@ -233,6 +233,10 @@
         color: #a5b4fc;
         border-color: rgba(99, 102, 241, 0.3) !important;
       }
+      .btn-cancel {
+        color: #9ca3af;
+        border-color: rgba(156, 163, 175, 0.3) !important;
+      }
       .export-status {
         font-size: 0.85rem;
       }
@@ -244,6 +248,148 @@
         font-size: 0.82rem;
         color: #6ee7b7;
         margin: 6px 0 0;
+      }
+
+      /* ── Duplicate button ── */
+      .btn-duplicate {
+        color: #86efac;
+        border-color: rgba(74, 222, 128, 0.3) !important;
+      }
+
+      /* ── Notes section ── */
+      .section-heading-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0 4px;
+      }
+      .section-heading-row h3 {
+        margin: 0;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+      }
+      .btn-small {
+        width: auto;
+        margin-top: 0;
+        padding: 3px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 8px;
+        color: #9ca3af;
+        border-color: rgba(156, 163, 175, 0.3) !important;
+      }
+      .notes-display {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #d1d5db;
+        margin: 4px 0 8px;
+        word-break: break-word;
+        white-space: pre-wrap;
+      }
+      .notes-display.muted {
+        color: #9ca3af;
+      }
+      .notes-textarea {
+        min-height: 72px;
+        font-size: 0.9rem;
+      }
+      .notes-editor-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .notes-editor-actions button {
+        width: auto;
+        margin-top: 0;
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      /* ── Tags section ── */
+      .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 4px 0 10px;
+        min-height: 26px;
+      }
+      .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px 2px 10px;
+        border-radius: 999px;
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        font-size: 0.78rem;
+        color: #a5b4fc;
+      }
+      .tag-chip-remove {
+        background: none;
+        border: none;
+        padding: 0 2px;
+        margin: 0;
+        width: auto;
+        margin-top: 0;
+        cursor: pointer;
+        color: #9ca3af;
+        font-size: 0.9rem;
+        line-height: 1;
+        border-radius: 4px;
+        font-weight: 400;
+      }
+      .tag-chip-remove:hover {
+        color: #fca5a5;
+        background: none;
+        opacity: 1;
+      }
+      .tag-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .tag-input-row input {
+        flex: 1;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+        color: inherit;
+        padding: 6px 12px;
+        font-family: inherit;
+        font-size: 0.85rem;
+        box-sizing: border-box;
+      }
+      .tag-input-row input:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+      .tag-input-row button {
+        width: auto;
+        margin-top: 0;
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      /* ── Sidebar tags and note indicator ── */
+      .pack-item-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 5px;
+      }
+      .badge-tag {
+        background: rgba(99, 102, 241, 0.12);
+        color: #a5b4fc;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      }
+      .note-indicator {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        opacity: 0.7;
       }
     </style>
   </head>
@@ -282,10 +428,39 @@
             <div id="detailActions" class="detail-actions">
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
               <button id="rerunBtn" class="btn-rerun" disabled>Re-run from this pack</button>
+              <button id="duplicateBtn" class="btn-duplicate" disabled>Duplicate pack</button>
               <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
+              <button id="cancelDeleteBtn" class="btn-cancel" style="display:none">Cancel</button>
               <span id="exportStatus" class="export-status"></span>
             </div>
             <div id="detailContent"></div>
+
+            <!-- Notes section -->
+            <div id="notesSection" style="display:none">
+              <div class="section-heading-row">
+                <h3>Notes</h3>
+                <button id="editNotesBtn" class="btn-small">Edit</button>
+              </div>
+              <p id="notesDisplay" class="notes-display muted"></p>
+              <div id="notesEditor" style="display:none">
+                <textarea id="notesInput" class="notes-textarea" placeholder="Add a note about this pack…"></textarea>
+                <div class="notes-editor-actions">
+                  <button id="saveNotesBtn">Save notes</button>
+                  <button id="cancelNotesBtn" class="btn-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tags section -->
+            <div id="tagsSection" style="display:none">
+              <h3 style="margin-top:20px">Tags</h3>
+              <div id="tagsList" class="tags-list"></div>
+              <div class="tag-input-row">
+                <input id="tagInput" type="text" placeholder="Add tag…" />
+                <button id="addTagBtn">Add tag</button>
+              </div>
+              <p id="tagError" class="state-msg error" style="display:none"></p>
+            </div>
           </div>
         </div>
       </div>
@@ -305,13 +480,30 @@
       const detailContent  = document.getElementById("detailContent");
       const exportBtn      = document.getElementById("exportBtn");
       const rerunBtn       = document.getElementById("rerunBtn");
+      const duplicateBtn   = document.getElementById("duplicateBtn");
       const deleteBtn      = document.getElementById("deleteBtn");
+      const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
+      const notesSection   = document.getElementById("notesSection");
+      const notesDisplay   = document.getElementById("notesDisplay");
+      const notesEditor    = document.getElementById("notesEditor");
+      const notesInput     = document.getElementById("notesInput");
+      const editNotesBtn   = document.getElementById("editNotesBtn");
+      const saveNotesBtn   = document.getElementById("saveNotesBtn");
+      const cancelNotesBtn = document.getElementById("cancelNotesBtn");
+      const tagsSection    = document.getElementById("tagsSection");
+      const tagsList       = document.getElementById("tagsList");
+      const tagInput       = document.getElementById("tagInput");
+      const addTagBtn      = document.getElementById("addTagBtn");
+      const tagError       = document.getElementById("tagError");
 
       // Track the currently selected pack id, full object, and the full unfiltered list
       let selectedId   = null;
       let selectedPack = null;
       let allPacks     = [];
+      let pendingDelete = false;
+
+      const GOAL_PREVIEW_MAX_LEN = 60;
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
@@ -348,6 +540,8 @@
           if (p.goal && p.goal.toLowerCase().includes(q)) return true;
           if (p.objective.toLowerCase().includes(q)) return true;
           if (Array.isArray(p.touchedAreas) && p.touchedAreas.some(a => a.toLowerCase().includes(q))) return true;
+          if (p.notes && p.notes.toLowerCase().includes(q)) return true;
+          if (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q))) return true;
           return false;
         });
       }
@@ -384,7 +578,11 @@
               <span>${escapeHtml(formatDate(pack.createdAt))}</span>
               <span class="${confidenceClass}">${escapeHtml(pack.confidence)}</span>
               <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
+              ${pack.notes ? `<span class="note-indicator">✎</span>` : ""}
             </div>
+            ${Array.isArray(pack.tags) && pack.tags.length > 0
+              ? `<div class="pack-item-tags">${pack.tags.map(t => `<span class="badge badge-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+              : ""}
           `;
 
           li.addEventListener("click", () => selectPack(pack));
@@ -393,9 +591,46 @@
       }
 
       // ── Pack detail rendering ─────────────────────────────────
+      function renderNotesSection(pack) {
+        notesSection.style.display = "";
+        notesEditor.style.display = "none";
+        editNotesBtn.style.display = "";
+        if (pack.notes) {
+          notesDisplay.textContent = pack.notes;
+          notesDisplay.className = "notes-display";
+        } else {
+          notesDisplay.textContent = "No notes yet.";
+          notesDisplay.className = "notes-display muted";
+        }
+      }
+
+      function renderTagsSection(pack) {
+        tagsSection.style.display = "";
+        tagError.style.display = "none";
+        tagsList.innerHTML = "";
+        const tags = Array.isArray(pack.tags) ? pack.tags : [];
+        for (const tag of tags) {
+          const chip = document.createElement("span");
+          chip.className = "tag-chip";
+          chip.appendChild(document.createTextNode(tag));
+          const removeBtn = document.createElement("button");
+          removeBtn.className = "tag-chip-remove";
+          removeBtn.setAttribute("aria-label", "Remove tag " + tag);
+          removeBtn.dataset.tag = tag;
+          removeBtn.textContent = "×";
+          chip.appendChild(removeBtn);
+          tagsList.appendChild(chip);
+        }
+      }
+
       function selectPack(pack) {
         selectedId   = pack.id;
         selectedPack = pack;
+
+        // Reset pending delete state when switching packs
+        pendingDelete = false;
+        deleteBtn.textContent = "Delete";
+        cancelDeleteBtn.style.display = "none";
 
         // Update selected highlight
         for (const item of packListEl.querySelectorAll(".pack-item")) {
@@ -405,6 +640,7 @@
         exportBtn.disabled = false;
         rerunBtn.disabled  = !pack.goal;
         rerunBtn.title     = pack.goal ? "" : "No original goal stored for this pack";
+        duplicateBtn.disabled = false;
         deleteBtn.disabled = false;
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
@@ -453,18 +689,29 @@
             <ul>${renderList(pack.openQuestions)}</ul>
           </div>
         `;
+
+        renderNotesSection(pack);
+        renderTagsSection(pack);
       }
 
       function clearDetail() {
         selectedId   = null;
         selectedPack = null;
+        pendingDelete = false;
         detailCard.style.display = "none";
         exportBtn.disabled = true;
         rerunBtn.disabled  = true;
         rerunBtn.title     = "";
+        duplicateBtn.disabled = true;
         deleteBtn.disabled = true;
+        deleteBtn.textContent = "Delete";
+        cancelDeleteBtn.style.display = "none";
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
+        notesSection.style.display = "none";
+        notesEditor.style.display = "none";
+        tagsSection.style.display = "none";
+        tagError.style.display = "none";
       }
 
       // ── Prefill generator form from a saved pack ─────────────
@@ -472,6 +719,10 @@
         goalInput.value    = pack.goal || "";
         contextInput.value = pack.repositoryContext || "";
         generateError.style.display = "none";
+        const goalPreview = pack.goal
+          ? `"${pack.goal.length > GOAL_PREVIEW_MAX_LEN ? pack.goal.slice(0, GOAL_PREVIEW_MAX_LEN) + "…" : pack.goal}"`
+          : "saved pack";
+        draftHint.textContent = `↑ Loaded from ${goalPreview} — edit freely then generate.`;
         draftHint.style.display = "";
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         goalInput.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
@@ -604,11 +855,21 @@
       // ── Delete pack ───────────────────────────────────────────
       deleteBtn.addEventListener("click", async () => {
         if (!selectedId) return;
-        if (!window.confirm("Delete this pack? This cannot be undone.")) return;
 
+        if (!pendingDelete) {
+          // First click: ask for inline confirmation
+          pendingDelete = true;
+          deleteBtn.textContent = "⚠ Confirm delete?";
+          cancelDeleteBtn.style.display = "";
+          return;
+        }
+
+        // Second click: proceed with deletion
         const idToDelete = selectedId;
+        pendingDelete = false;
         deleteBtn.disabled = true;
         deleteBtn.textContent = "Deleting…";
+        cancelDeleteBtn.style.display = "none";
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
 
@@ -628,6 +889,155 @@
           deleteBtn.textContent = "Delete";
           exportStatus.textContent = "Delete failed: " + (err.message || "unknown error");
           exportStatus.className = "export-status error";
+        }
+      });
+
+      // ── Cancel pending delete ─────────────────────────────────
+      cancelDeleteBtn.addEventListener("click", () => {
+        pendingDelete = false;
+        deleteBtn.textContent = "Delete";
+        cancelDeleteBtn.style.display = "none";
+      });
+
+      // ── Duplicate pack ────────────────────────────────────────
+      duplicateBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+        duplicateBtn.disabled = true;
+        duplicateBtn.textContent = "Duplicating…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/duplicate", {
+            method: "POST"
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Duplicate failed (" + res.status + ")");
+          }
+          const dup = await res.json();
+          selectedId = dup.id;
+          await loadPacks();
+          selectPack(dup);
+        } catch (err) {
+          exportStatus.textContent = "Duplicate failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          duplicateBtn.disabled = false;
+          duplicateBtn.textContent = "Duplicate pack";
+        }
+      });
+
+      // ── Notes editing ─────────────────────────────────────────
+      editNotesBtn.addEventListener("click", () => {
+        notesInput.value = selectedPack?.notes || "";
+        notesEditor.style.display = "";
+        editNotesBtn.style.display = "none";
+        notesInput.focus();
+      });
+
+      cancelNotesBtn.addEventListener("click", () => {
+        notesEditor.style.display = "none";
+        editNotesBtn.style.display = "";
+      });
+
+      saveNotesBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        const notes = notesInput.value;
+        saveNotesBtn.disabled = true;
+        saveNotesBtn.textContent = "Saving…";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Save failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          renderNotesSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          exportStatus.textContent = "Save notes failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          saveNotesBtn.disabled = false;
+          saveNotesBtn.textContent = "Save notes";
+        }
+      });
+
+      // ── Tag add ───────────────────────────────────────────────
+      async function addTag() {
+        if (!selectedId || !selectedPack) return;
+        const raw = tagInput.value.trim();
+        if (!raw) return;
+        tagError.style.display = "none";
+        const existing = Array.isArray(selectedPack.tags) ? selectedPack.tags : [];
+        addTagBtn.disabled = true;
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tags: [...existing, raw] })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Add tag failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          tagInput.value = "";
+          renderTagsSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          tagError.textContent = "Add tag failed: " + (err.message || "unknown error");
+          tagError.style.display = "";
+        } finally {
+          addTagBtn.disabled = false;
+        }
+      }
+
+      addTagBtn.addEventListener("click", addTag);
+      tagInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); addTag(); }
+      });
+
+      // ── Tag remove (delegated) ────────────────────────────────
+      tagsList.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".tag-chip-remove");
+        if (!btn || !selectedId || !selectedPack) return;
+        const tagToRemove = btn.dataset.tag;
+        const existing = Array.isArray(selectedPack.tags) ? selectedPack.tags : [];
+        tagError.style.display = "none";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tags: existing.filter(t => t !== tagToRemove) })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Remove tag failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          renderTagsSection(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          tagError.textContent = "Remove tag failed: " + (err.message || "unknown error");
+          tagError.style.display = "";
         }
       });
 

@@ -12,23 +12,42 @@ Ghostrail currently supports:
 - GitHub issue markdown export
 - original goal persistence
 - repositoryContext persistence
-- search/filter saved packs
-- delete saved pack
+- search/filter saved packs (matches goal, objective, touchedAreas, notes, tags)
+- delete saved pack (inline two-step confirmation)
 - responsive layout
-- **re-run from saved pack (prefill generator form from a selected pack)**
+- re-run from saved pack (prefill generator form from a selected pack)
+- inline delete confirmation (replaces window.confirm)
+- draft hint shows source pack's goal after re-run
+- **notes on saved packs (edit/save via PATCH)**
+- **tags on saved packs (add/remove via PATCH, normalized server-side)**
+- **sidebar shows compact tag chips and note indicator**
+- **duplicate pack (POST /api/intent-packs/:id/duplicate)**
+- **notes and tags surfaced in GitHub Issue markdown export**
+- **repositoryContext surfaced in GitHub Issue markdown export**
 
 ## Current verified baseline
 - POST /api/intent-pack works
 - GET /api/intent-packs works
 - GET /api/intent-packs/:id works
-- GET /api/intent-packs/:id/export-issue works
+- GET /api/intent-packs/:id/export-issue works (includes notes, tags, and repositoryContext when present)
+- POST /api/intent-pack/export-issue works
 - DELETE /api/intent-packs/:id works
+- PATCH /api/intent-packs/:id works (notes, tags, normalized)
+- POST /api/intent-packs/:id/duplicate works
 - UI shows saved packs and detail view
-- UI supports search/filter
-- UI supports delete with confirmation
+- UI supports search/filter (goal, objective, touchedAreas, notes, tags)
+- UI supports inline delete confirmation (two-step, no window.confirm)
 - UI supports re-run/prefill from a saved pack
+- UI supports notes editing (inline editor, PATCH on save)
+- UI supports tags add/remove (chip list, PATCH on change)
+- UI sidebar shows compact tag badges and note indicator
+- UI supports duplicate pack (POST, refreshes + selects new)
+- draft hint shows the source pack's goal after re-run
+- GitHub Issue markdown export includes tags line when present
+- GitHub Issue markdown export includes notes section when present
+- GitHub Issue markdown export includes repositoryContext section when present
 - build passes
-- all 24 tests pass
+- all 57 tests pass
 
 ## Active stop-line
 Only take the next safe bounded slice.
@@ -51,24 +70,50 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
-- Slice: Re-run from saved pack
-- Why this was the right next move: uses already-persisted goal and repositoryContext fields, closes the main product loop by letting users iterate on existing packs without copy-paste, stays inside the existing UI flow, locally verifiable, no backend changes needed
+- Slice: B9 — Surface repositoryContext in GitHub Issue markdown export
+- Why this was the right next move: repositoryContext was persisted, shown in the UI, and already exported in notes/tags context — completing this closes the last visible field dropped during export; single-file formatter change, zero-risk
 - Files changed:
-  - `public/index.html` — added "Re-run from this pack" button in detail actions, `draftHint` hint text near generator form, `btn-rerun` and `draft-hint` CSS classes, `rerunBtn`/`draftHint` DOM refs, `selectedPack` state variable, `prefillFromPack()` helper, re-run click handler, `clearDetail()` reset, `draftHint` clear on successful generate
+  - `src/core/issueMarkdown.ts` — widened parameter to include `repositoryContext?: string`; added conditional `## Repository context` section after Tags line and before Non-goals; no change to existing sections
+  - `src/generateIntentPack.test.ts` — 5 new tests: repositoryContext present, repositoryContext absent, repositoryContext blank/whitespace, older pack (no repositoryContext) with notes/tags intact, plus extended backward-compat test
 - Verification:
   - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (24/24 tests)
-  - Manual flow: selecting a pack with goal enables the button, clicking it fills both fields and scrolls to the form; older packs without goal disable the button with a tooltip; editing prefilled fields works; generating creates a new pack; draftHint disappears after generate
+  - `npm test` passes (57/57 tests)
+  - CodeQL: 0 alerts
 - Result: working
-- Rollback path: revert `public/index.html` to previous state
+- Rollback path: revert `issueMarkdown.ts` to B8 state, remove 5 new tests
+
+### Previous completed slice (B8)
+- Slice: B8 — Surface notes and tags in GitHub Issue markdown export
+- Slice: Saved Intent Pack organization and refinement milestone (all 6 subparts)
+- Subparts completed:
+  1. Notes support — PATCH endpoint + inline editor UI + backward compat
+  2. Tags support — PATCH endpoint + chip add/remove UI + server-side normalization
+  3. Sidebar visibility — compact tag badges + note indicator (✎) in sidebar list items
+  4. Search/filter extended — filter now matches notes and tags
+  5. Duplicate pack — POST /api/intent-packs/:id/duplicate + "Duplicate pack" button in detail actions
+  6. Automated coverage — 11 new unit tests (store functions) + 10 new integration tests (HTTP routes)
+- Files changed:
+  - `src/core/types.ts` — added `notes?: string` and `tags?: string[]` to StoredIntentPack
+  - `src/core/intentPackStore.ts` — added `patchIntentPack` and `duplicateIntentPack`
+  - `src/core/handler.ts` — added PATCH and POST-duplicate routes with input validation
+  - `src/intentPackStore.test.ts` — 11 new unit tests for patch and duplicate
+  - `src/server.test.ts` — 10 new integration tests for PATCH and POST-duplicate
+  - `public/index.html` — notes section, tags section, sidebar tags/indicator, filter extension, duplicate button + all new JS handlers
+- Verification:
+  - `npm run build` passes (TypeScript, zero errors)
+  - `npm test` passes (48/48 tests)
+  - CodeQL: 0 alerts
+  - Code review: 2 issues fixed (XSS via createElement, GOAL_PREVIEW_MAX_LEN constant)
+- Result: working
+- Rollback path: revert all 6 files to previous state
 
 ### Current recommended next slice
-- Slice: Add tests for the `prefillFromPack` logic (or document why they are not practical in this setup)
-- Scope: The `prefillFromPack` function is inline DOM-manipulation JS inside `index.html`. If a lightweight headless browser test harness (e.g. `jsdom` or `playwright`) is added, it could be unit/integration tested. Otherwise, this slice is documenting the gap and adding a comment in the test file noting browser-flow tests are deferred.
-- Why now: the new re-run flow has no automated test coverage; the next safest slice is either adding that coverage or picking the next backlog item (B5 — export route integration coverage) which is already testable
-- Expected files: new or extended test files
-- Verification target: new tests pass alongside existing 24
-- Stop-line: do not add a new test framework unless it fits naturally; if not practical, pick B5 instead
+- Scope: The export formatter is now complete for all persisted fields (notes, tags, repositoryContext). Good next candidates:
+  - Pack metadata editing — allow editing the goal or repositoryContext after creation (currently read-only in the detail view)
+  - Browser-flow tests for notes/tags/duplicate UI interactions (requires jsdom or playwright)
+- Why now: export is now complete; the remaining gap in the product loop is that goal/repositoryContext are read-only after creation
+- Expected files: extend PATCH handler to accept goal/repositoryContext, update `src/core/intentPackStore.ts`, add inline editors in `public/index.html`, tests
+- Stop-line: do not redesign the pack schema; only allow editing the mutable user-supplied fields
 
 ## If blocked
 If blocked, stop and write:

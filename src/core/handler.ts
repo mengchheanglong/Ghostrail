@@ -7,6 +7,8 @@ import {
   listIntentPacks,
   getIntentPackById,
   deleteIntentPack,
+  patchIntentPack,
+  duplicateIntentPack,
 } from "./intentPackStore.js";
 import type { IntentPackInput } from "./types.js";
 
@@ -87,6 +89,50 @@ export function createHandler(dataDir: string, publicDir: string) {
         const deleted = await deleteIntentPack(id, dataDir);
         if (!deleted) return json(res, 404, { error: "not found" });
         return json(res, 200, { ok: true });
+      }
+
+      if (method === "PATCH" && url.pathname.startsWith("/api/intent-packs/")) {
+        const id = url.pathname.slice("/api/intent-packs/".length);
+        const body = await readJson<{ notes?: unknown; tags?: unknown }>(req);
+        const patch: { notes?: string; tags?: string[] } = {};
+        if (body.notes !== undefined) {
+          if (typeof body.notes !== "string") {
+            return json(res, 400, { error: "notes must be a string" });
+          }
+          patch.notes = body.notes;
+        }
+        if (body.tags !== undefined) {
+          if (
+            !Array.isArray(body.tags) ||
+            !(body.tags as unknown[]).every((t) => typeof t === "string")
+          ) {
+            return json(res, 400, { error: "tags must be an array of strings" });
+          }
+          const seen = new Set<string>();
+          patch.tags = [];
+          for (const tag of body.tags as string[]) {
+            const normalized = tag.trim();
+            if (!normalized) continue;
+            const lower = normalized.toLowerCase();
+            if (seen.has(lower)) continue;
+            seen.add(lower);
+            patch.tags.push(normalized);
+          }
+        }
+        const updated = await patchIntentPack(id, patch, dataDir);
+        if (!updated) return json(res, 404, { error: "not found" });
+        return json(res, 200, updated);
+      }
+
+      if (method === "POST" && url.pathname.startsWith("/api/intent-packs/")) {
+        const rest = url.pathname.slice("/api/intent-packs/".length);
+        if (rest.endsWith("/duplicate")) {
+          const id = rest.slice(0, -"/duplicate".length);
+          const duplicate = await duplicateIntentPack(id, dataDir);
+          if (!duplicate) return json(res, 404, { error: "not found" });
+          return json(res, 200, duplicate);
+        }
+        return json(res, 404, { error: "not found" });
       }
 
       if (method === "GET" && url.pathname.startsWith("/api/intent-packs/")) {

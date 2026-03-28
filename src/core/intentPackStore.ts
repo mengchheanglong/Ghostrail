@@ -81,3 +81,42 @@ export async function deleteIntentPack(
     return false;
   }
 }
+
+export async function patchIntentPack(
+  id: string,
+  patch: { notes?: string; tags?: string[] },
+  dataDir = defaultDataDir
+): Promise<StoredIntentPack | null> {
+  if (!uuidPattern.test(id)) return null;
+  const filePath = join(dataDir, `${id}.json`);
+  let stored: StoredIntentPack;
+  try {
+    const content = await readFile(filePath, "utf8");
+    stored = JSON.parse(content) as StoredIntentPack;
+  } catch {
+    return null;
+  }
+  if (patch.notes !== undefined) {
+    stored.notes = patch.notes;
+  }
+  if (patch.tags !== undefined) {
+    stored.tags = patch.tags;
+  }
+  await writeFile(filePath, JSON.stringify(stored, null, 2), "utf8");
+  return stored;
+}
+
+export async function duplicateIntentPack(
+  id: string,
+  dataDir = defaultDataDir
+): Promise<StoredIntentPack | null> {
+  const dir = dataDir;
+  const original = await getIntentPackById(id, dir);
+  if (!original) return null;
+  const newId = crypto.randomUUID();
+  const newCreatedAt = new Date().toISOString();
+  const duplicate: StoredIntentPack = { ...original, id: newId, createdAt: newCreatedAt };
+  await ensureDir(dir);
+  await writeFile(join(dir, `${newId}.json`), JSON.stringify(duplicate, null, 2), "utf8");
+  return duplicate;
+}
