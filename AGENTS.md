@@ -33,6 +33,30 @@ Always operate in this mode:
 5. Update state documents
 6. Stop cleanly
 
+## Execution modes
+
+### Safe Slice Mode
+Use when the task is risky, ambiguous, architectural, or likely to spill across subsystems.
+
+Rules:
+- complete only one bounded slice
+- verify it
+- stop at a clear boundary
+
+### Milestone Mode
+Use when the task is explicitly framed as a single-subsystem milestone with ordered subparts.
+
+Rules:
+- stay inside one subsystem
+- complete multiple ordered subparts in sequence
+- verify as you go
+- stop only when:
+  - the milestone is complete, or
+  - a real wall is hit (ambiguity, failing verification beyond a small fix, missing credentials, broader product decision, or subsystem boundary crossing)
+
+In Milestone Mode, do not stop merely because the first successful subtask is done.
+Continue through the listed subparts unless a real stop condition is hit.
+
 ## Slice selection rules
 Choose only one slice per run.
 
