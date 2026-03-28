@@ -46,8 +46,17 @@ const server = createServer(async (req, res) => {
             return json(res, 200, packs);
         }
         if (method === "GET" && url.pathname.startsWith("/api/intent-packs/")) {
-            const id = url.pathname.slice("/api/intent-packs/".length);
-            const pack = await getIntentPackById(id);
+            const rest = url.pathname.slice("/api/intent-packs/".length);
+            const exportIssueSuffix = "/export-issue";
+            if (rest.endsWith(exportIssueSuffix)) {
+                const id = rest.slice(0, -exportIssueSuffix.length);
+                const pack = await getIntentPackById(id);
+                if (!pack)
+                    return json(res, 404, { error: "not found" });
+                const markdown = toGitHubIssueMarkdown(pack);
+                return json(res, 200, { markdown });
+            }
+            const pack = await getIntentPackById(rest);
             if (!pack)
                 return json(res, 404, { error: "not found" });
             return json(res, 200, pack);

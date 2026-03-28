@@ -166,6 +166,26 @@
         line-height: 1.6;
         color: #d1d5db;
       }
+
+      /* ── Export action row ── */
+      .detail-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .detail-actions button {
+        width: auto;
+        margin-top: 0;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .export-status {
+        font-size: 0.85rem;
+      }
+      .export-status.success { color: #6ee7b7; }
+      .export-status.error   { color: #fca5a5; }
     </style>
   </head>
   <body>
@@ -198,6 +218,10 @@
         <!-- Right: detail view -->
         <div class="main">
           <div id="detailCard" class="card" style="margin-top:0; display:none">
+            <div id="detailActions" class="detail-actions">
+              <button id="exportBtn" disabled>Copy as GitHub Issue</button>
+              <span id="exportStatus" class="export-status"></span>
+            </div>
             <div id="detailContent"></div>
           </div>
         </div>
@@ -214,6 +238,8 @@
       const packListState  = document.getElementById("packListState");
       const detailCard     = document.getElementById("detailCard");
       const detailContent  = document.getElementById("detailContent");
+      const exportBtn      = document.getElementById("exportBtn");
+      const exportStatus   = document.getElementById("exportStatus");
 
       // Track the currently selected pack id
       let selectedId = null;
@@ -288,6 +314,10 @@
         for (const item of packListEl.querySelectorAll(".pack-item")) {
           item.classList.toggle("selected", item.dataset.id === pack.id);
         }
+
+        exportBtn.disabled = false;
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
 
         detailCard.style.display = "";
         detailContent.innerHTML = `
@@ -388,6 +418,42 @@
         } finally {
           generateBtn.disabled = false;
           generateBtn.textContent = "Generate & Save Intent Pack";
+        }
+      });
+
+      // ── Export: Copy as GitHub Issue ─────────────────────────
+      exportBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+
+        exportBtn.disabled = true;
+        exportBtn.textContent = "Copying…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/export-issue");
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Server error (" + res.status + ")");
+          }
+          const { markdown } = await res.json();
+
+          try {
+            await navigator.clipboard.writeText(markdown);
+            exportStatus.textContent = "✓ Copied to clipboard";
+            exportStatus.className = "export-status success";
+          } catch (_) {
+            // Clipboard API unavailable — show the text for manual copy
+            exportStatus.textContent = "Clipboard unavailable — markdown logged to console";
+            exportStatus.className = "export-status error";
+            console.log("GitHub Issue Markdown:\n\n" + markdown);
+          }
+        } catch (err) {
+          exportStatus.textContent = "Export failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          exportBtn.disabled = false;
+          exportBtn.textContent = "Copy as GitHub Issue";
         }
       });
 
