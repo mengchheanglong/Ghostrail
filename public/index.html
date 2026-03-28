@@ -233,6 +233,10 @@
         color: #a5b4fc;
         border-color: rgba(99, 102, 241, 0.3) !important;
       }
+      .btn-cancel {
+        color: #9ca3af;
+        border-color: rgba(156, 163, 175, 0.3) !important;
+      }
       .export-status {
         font-size: 0.85rem;
       }
@@ -283,6 +287,7 @@
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
               <button id="rerunBtn" class="btn-rerun" disabled>Re-run from this pack</button>
               <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
+              <button id="cancelDeleteBtn" class="btn-cancel" style="display:none">Cancel</button>
               <span id="exportStatus" class="export-status"></span>
             </div>
             <div id="detailContent"></div>
@@ -306,12 +311,14 @@
       const exportBtn      = document.getElementById("exportBtn");
       const rerunBtn       = document.getElementById("rerunBtn");
       const deleteBtn      = document.getElementById("deleteBtn");
+      const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
       const exportStatus   = document.getElementById("exportStatus");
 
       // Track the currently selected pack id, full object, and the full unfiltered list
       let selectedId   = null;
       let selectedPack = null;
       let allPacks     = [];
+      let pendingDelete = false;
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
@@ -397,6 +404,11 @@
         selectedId   = pack.id;
         selectedPack = pack;
 
+        // Reset pending delete state when switching packs
+        pendingDelete = false;
+        deleteBtn.textContent = "Delete";
+        cancelDeleteBtn.style.display = "none";
+
         // Update selected highlight
         for (const item of packListEl.querySelectorAll(".pack-item")) {
           item.classList.toggle("selected", item.dataset.id === pack.id);
@@ -458,11 +470,14 @@
       function clearDetail() {
         selectedId   = null;
         selectedPack = null;
+        pendingDelete = false;
         detailCard.style.display = "none";
         exportBtn.disabled = true;
         rerunBtn.disabled  = true;
         rerunBtn.title     = "";
         deleteBtn.disabled = true;
+        deleteBtn.textContent = "Delete";
+        cancelDeleteBtn.style.display = "none";
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
       }
@@ -472,6 +487,10 @@
         goalInput.value    = pack.goal || "";
         contextInput.value = pack.repositoryContext || "";
         generateError.style.display = "none";
+        const goalPreview = pack.goal
+          ? `"${pack.goal.length > 60 ? pack.goal.slice(0, 60) + "…" : pack.goal}"`
+          : "saved pack";
+        draftHint.textContent = `↑ Loaded from ${goalPreview} — edit freely then generate.`;
         draftHint.style.display = "";
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         goalInput.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
@@ -604,11 +623,21 @@
       // ── Delete pack ───────────────────────────────────────────
       deleteBtn.addEventListener("click", async () => {
         if (!selectedId) return;
-        if (!window.confirm("Delete this pack? This cannot be undone.")) return;
 
+        if (!pendingDelete) {
+          // First click: ask for inline confirmation
+          pendingDelete = true;
+          deleteBtn.textContent = "⚠ Confirm delete?";
+          cancelDeleteBtn.style.display = "";
+          return;
+        }
+
+        // Second click: proceed with deletion
         const idToDelete = selectedId;
+        pendingDelete = false;
         deleteBtn.disabled = true;
         deleteBtn.textContent = "Deleting…";
+        cancelDeleteBtn.style.display = "none";
         exportStatus.textContent = "";
         exportStatus.className = "export-status";
 
@@ -629,6 +658,13 @@
           exportStatus.textContent = "Delete failed: " + (err.message || "unknown error");
           exportStatus.className = "export-status error";
         }
+      });
+
+      // ── Cancel pending delete ─────────────────────────────────
+      cancelDeleteBtn.addEventListener("click", () => {
+        pendingDelete = false;
+        deleteBtn.textContent = "Delete";
+        cancelDeleteBtn.style.display = "none";
       });
 
       // ── Boot ─────────────────────────────────────────────────

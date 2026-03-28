@@ -9,11 +9,7 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-### B5 — Export route integration coverage
-- Value: reliability
-- Scope: test only
-- Risk: low
-- Verification: tests pass
+_No items currently ready. Consider browser-flow test coverage or a new user-visible feature._
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -35,6 +31,9 @@ Move completed items here with short completion notes.
 
 ### B4 — Responsive mobile layout
 - Completed: flex stack on screens ≤640px.
+
+### B5 — Export route integration coverage
+- Completed: 3 integration tests added for POST /api/intent-pack/export-issue (valid goal, missing goal, whitespace goal). GET export-issue tests were already present. 27 tests now pass.
 
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.

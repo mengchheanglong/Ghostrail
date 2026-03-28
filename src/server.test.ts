@@ -41,6 +41,57 @@ async function fetchJson(
 
 // ── Export-issue route tests ──────────────────────────────────
 
+test("POST /api/intent-pack/export-issue with a valid goal returns markdown and pack", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/export-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Add role checks without breaking auth" })
+      }
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(typeof b["markdown"] === "string", "response should have a markdown string");
+    assert.match(b["markdown"] as string, /## Objective/);
+    assert.ok(b["pack"] !== null && typeof b["pack"] === "object", "response should include the pack");
+  });
+});
+
+test("POST /api/intent-pack/export-issue without a goal returns 400", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/export-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "goal is required");
+  });
+});
+
+test("POST /api/intent-pack/export-issue with a whitespace-only goal returns 400", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/export-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "   " })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "goal is required");
+  });
+});
+
 test("GET /api/intent-packs/:id/export-issue returns markdown for an existing pack", async () => {
   await withTestServer(async (baseUrl, dataDir) => {
     const pack = generateIntentPack({ goal: "Test export flow" });
