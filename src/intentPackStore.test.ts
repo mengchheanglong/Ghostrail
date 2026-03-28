@@ -425,3 +425,102 @@ test("listIntentPacks includes the duplicate and the original after duplication"
     assert.equal(list.length, 2, "both original and duplicate should appear");
   });
 });
+
+// ── Starring and archiving ────────────────────────────────────
+
+test("patchIntentPack sets starred to true", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack to star" });
+    const stored = await saveIntentPack(pack, "Pack to star", undefined, dir);
+
+    const patched = await patchIntentPack(stored.id, { starred: true }, dir);
+    assert.ok(patched, "patchIntentPack should return the updated pack");
+    assert.equal(patched!.starred, true, "starred should be true");
+
+    const fetched = await getIntentPackById(stored.id, dir);
+    assert.equal(fetched!.starred, true, "starred should survive disk round-trip");
+  });
+});
+
+test("patchIntentPack sets starred to false removes the field", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack to unstar" });
+    const stored = await saveIntentPack(pack, "Pack to unstar", undefined, dir);
+    await patchIntentPack(stored.id, { starred: true }, dir);
+
+    const patched = await patchIntentPack(stored.id, { starred: false }, dir);
+    assert.ok(patched, "patchIntentPack should return the updated pack");
+    assert.equal(patched!.starred, undefined, "starred should be removed when set to false");
+  });
+});
+
+test("patchIntentPack sets archived to true", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack to archive" });
+    const stored = await saveIntentPack(pack, "Pack to archive", undefined, dir);
+
+    const patched = await patchIntentPack(stored.id, { archived: true }, dir);
+    assert.ok(patched, "patchIntentPack should return the updated pack");
+    assert.equal(patched!.archived, true, "archived should be true");
+
+    const fetched = await getIntentPackById(stored.id, dir);
+    assert.equal(fetched!.archived, true, "archived should survive disk round-trip");
+  });
+});
+
+test("patchIntentPack sets archived to false removes the field", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack to unarchive" });
+    const stored = await saveIntentPack(pack, "Pack to unarchive", undefined, dir);
+    await patchIntentPack(stored.id, { archived: true }, dir);
+
+    const patched = await patchIntentPack(stored.id, { archived: false }, dir);
+    assert.ok(patched);
+    assert.equal(patched!.archived, undefined, "archived should be removed when set to false");
+  });
+});
+
+test("older packs without starred or archived still load safely", async () => {
+  await withTempDir(async (dir) => {
+    const id = "cccccccc-dddd-eeee-ffff-000000000000";
+    const oldPack = {
+      id,
+      createdAt: new Date().toISOString(),
+      objective: "Old objective without starred or archived",
+      nonGoals: [],
+      constraints: [],
+      acceptanceCriteria: [],
+      touchedAreas: [],
+      risks: [],
+      openQuestions: [],
+      confidence: "medium",
+      reasoningMode: "heuristic",
+    };
+    await writeFile(join(dir, `${id}.json`), JSON.stringify(oldPack, null, 2), "utf8");
+
+    const list = await listIntentPacks(dir);
+    assert.equal(list.length, 1, "old pack should load");
+    assert.equal(list[0]!.starred, undefined, "starred should be undefined for old packs");
+    assert.equal(list[0]!.archived, undefined, "archived should be undefined for old packs");
+
+    const fetched = await getIntentPackById(id, dir);
+    assert.ok(fetched);
+    assert.equal(fetched!.starred, undefined);
+    assert.equal(fetched!.archived, undefined);
+  });
+});
+
+test("patchIntentPack starred and archived are independent of other fields", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack with all fields" });
+    const stored = await saveIntentPack(pack, "Pack with all fields", undefined, dir);
+    await patchIntentPack(stored.id, { notes: "My note", tags: ["keep"] }, dir);
+
+    const patched = await patchIntentPack(stored.id, { starred: true, archived: false }, dir);
+    assert.ok(patched);
+    assert.equal(patched!.starred, true);
+    assert.equal(patched!.archived, undefined);
+    assert.equal(patched!.notes, "My note", "notes should be untouched");
+    assert.deepEqual(patched!.tags, ["keep"], "tags should be untouched");
+  });
+});

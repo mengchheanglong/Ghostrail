@@ -26,6 +26,9 @@ Ghostrail currently supports:
 - **repositoryContext surfaced in GitHub Issue markdown export**
 - **goal editing on saved packs (inline editor, PATCH on save, rejects empty)**
 - **browser-flow tests for saved-pack action buttons (Playwright, B13-browser): re-run, delete confirmation, duplicate**
+- **starring saved packs (☆/★ toggle, sidebar indicator, PATCH starred)**
+- **archiving saved packs (archive/unarchive toggle, hidden by default, PATCH archived)**
+- **"Show archived" toggle in sidebar reveals archived packs**
 
 ## Current verified baseline
 - POST /api/intent-pack works
@@ -34,7 +37,7 @@ Ghostrail currently supports:
 - GET /api/intent-packs/:id/export-issue works (includes notes, tags, and repositoryContext when present)
 - POST /api/intent-pack/export-issue works
 - DELETE /api/intent-packs/:id works
-- PATCH /api/intent-packs/:id works (notes, tags, goal, repositoryContext; normalized/validated)
+- PATCH /api/intent-packs/:id works (notes, tags, goal, repositoryContext, starred, archived; normalized/validated)
 - POST /api/intent-packs/:id/duplicate works
 - UI shows saved packs and detail view
 - UI supports search/filter (goal, objective, touchedAreas, notes, tags, repositoryContext)
@@ -51,8 +54,12 @@ Ghostrail currently supports:
 - GitHub Issue markdown export includes tags line when present
 - GitHub Issue markdown export includes notes section when present
 - GitHub Issue markdown export includes repositoryContext section when present
+- UI supports starring (☆ Star / ★ Unstar button; ★ indicator in sidebar; PATCH starred)
+- UI supports archiving (Archive / Unarchive button; archived packs hidden by default; "Show archived" toggle reveals them)
+- older packs without starred/archived load safely
 - build passes
-- all 69 tests pass
+- all 79 unit/integration tests pass
+- all 12 browser tests pass
 
 ## Active stop-line
 Only take the next safe bounded slice.
@@ -75,6 +82,24 @@ Choose the highest-ROI task that is:
 ## Implementation log
 
 ### Last completed slice
+- Slice: B13 — Pack starring and archiving
+- Why this was the right next move: pack list was growing and needed lightweight curation; starring lets users mark important packs; archiving hides stale packs without deleting them; reused existing PATCH, sidebar, and filter patterns exactly; single coherent subsystem slice; all verification passed in one run
+- Files changed:
+  - `src/core/types.ts` — added `starred?: boolean` and `archived?: boolean` to `StoredIntentPack`
+  - `src/core/intentPackStore.ts` — widened `patchIntentPack` patch type; starred/archived stored as `true` or deleted (field absent when false) for clean JSON
+  - `src/core/handler.ts` — PATCH route validates starred/archived as booleans (400 on non-boolean)
+  - `public/index.html` — CSS for `.btn-star`, `.btn-archive`, `.star-indicator`, `.archived-indicator`, `.pack-item-archived`, `.show-archived-row`; "Show archived" checkbox in sidebar; `#starBtn` / `#archiveBtn` in detail actions; `showArchived` state; `updateCurationBtns()` helper; `getFilteredPacks()` filters archived by default; `renderPackList()` shows ★ and "archived" badge; `selectPack()` / `clearDetail()` updated; event listeners for star, archive, show-archived; `renderPackList([])` now clears innerHTML for correct DOM count
+  - `src/intentPackStore.test.ts` — 6 new unit tests: starred true/false, archived true/false, older packs without fields, isolation from other fields
+  - `src/server.test.ts` — 4 new integration tests: PATCH starred true, PATCH archived true, 400 non-boolean starred, 400 non-boolean archived
+  - `tests/browser/curation.spec.ts` (new) — 3 browser tests: star toggle updates button + shows ★ indicator; archive hides pack from default list; show-archived toggle reveals archived pack + shows "archived" badge
+- Verification:
+  - `npm run build` passes (TypeScript, zero errors)
+  - `npm test` passes (79/79 unit+integration tests; +10 from B13-browser baseline of 69)
+  - `npx playwright test` passes (12/12 browser tests; +3 curation tests; ~5s)
+- Result: working
+- Rollback path: revert 7 files, remove `tests/browser/curation.spec.ts`
+
+### Previous completed slice (B13-browser)
 - Slice: B13-browser — Browser-flow tests for saved-pack action buttons (re-run, delete confirmation, duplicate)
 - Why this was the right next move: Playwright infrastructure was already in place from B12; three high-value UI action flows (re-run, inline delete, duplicate) were still manually verified only; adding tests in an existing spec directory required no new dependencies or configuration; single coherent test-only slice with clear verification
 - Files changed:
@@ -100,75 +125,9 @@ Choose the highest-ROI task that is:
 - Result: working
 - Rollback path: remove `playwright.config.ts`, `tests/browser/editing.spec.ts`, revert `package.json` to remove devDependency and script
 
-### Previous completed slice (B11)
-- Slice: B11 — Extend search/filter to match repositoryContext
-- Why this was the right next move: repositoryContext was the only persisted, visible, and editable field that was still absent from the client-side filter predicate; one-line addition, zero server impact, zero risk, completes the consistency gap
-- Files changed:
-  - `public/index.html` — added `if (p.repositoryContext && p.repositoryContext.toLowerCase().includes(q)) return true;` to `getFilteredPacks()`, after the tags line, following the exact same guard pattern as goal/notes
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (69/69 tests; no change to test count — filter logic is browser-only, no practical unit test path without jsdom)
-  - Manual verification target: search by repositoryContext substring finds the correct pack; packs without repositoryContext still work; case-insensitive; existing fields unaffected
-- Result: working
-- Rollback path: remove the single added line from `getFilteredPacks()`
-
-### Previous completed slice (B10)
-- Slice: B10 — Pack metadata editing (goal and repositoryContext)
-- Why this was the right next move: goal and repositoryContext were already persisted, shown in the detail view, and exported — but read-only after creation; extending PATCH and adding inline editors followed the existing notes/tags pattern exactly; single coherent slice with clear local verification
-- Files changed:
-  - `src/core/intentPackStore.ts` — widened `patchIntentPack` patch type to include `goal?: string` and `repositoryContext?: string`; empty string on repositoryContext deletes the field via `delete stored.repositoryContext`
-  - `src/core/handler.ts` — PATCH route validates goal (rejects non-string → 400 "goal must be a string", rejects empty/whitespace → 400 "goal must not be empty", trims before store); validates repositoryContext (rejects non-string → 400, trims, passes `""` for blank so store removes it)
-  - `public/index.html` — added `goalSection` and `contextSection` DOM sections with edit/save/cancel inline editors (mirrors notes pattern); removed goal/context from static `detailContent.innerHTML`; added `renderGoalSection`/`renderContextSection` helpers; re-run button state refreshes after goal save; updated `clearDetail` to hide new sections
-  - `src/intentPackStore.test.ts` — 4 new unit tests: updates goal, updates repositoryContext, blank repositoryContext removes field, goal patch is isolated from notes/tags
-  - `src/server.test.ts` — 8 new integration tests: successful goal update, successful context update, trimming, blank context removal, empty goal 400, whitespace goal 400, non-string goal 400, non-string context 400
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (69/69 tests; +12 from B9 baseline of 57)
-- Result: working
-- Rollback path: revert 5 files to B9 state, remove 12 new tests
-
-### Previous completed slice (B9)
-- Slice: B9 — Surface repositoryContext in GitHub Issue markdown export
-- Why this was the right next move: repositoryContext was persisted, shown in the UI, and already exported in notes/tags context — completing this closes the last visible field dropped during export; single-file formatter change, zero-risk
-- Files changed:
-  - `src/core/issueMarkdown.ts` — widened parameter to include `repositoryContext?: string`; added conditional `## Repository context` section after Tags line and before Non-goals; no change to existing sections
-  - `src/generateIntentPack.test.ts` — 5 new tests: repositoryContext present, repositoryContext absent, repositoryContext blank/whitespace, older pack (no repositoryContext) with notes/tags intact, plus extended backward-compat test
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (57/57 tests)
-  - CodeQL: 0 alerts
-- Result: working
-- Rollback path: revert `issueMarkdown.ts` to B8 state, remove 5 new tests
-
-### Previous completed slice (B8)
-- Slice: B8 — Surface notes and tags in GitHub Issue markdown export
-- Slice: Saved Intent Pack organization and refinement milestone (all 6 subparts)
-- Subparts completed:
-  1. Notes support — PATCH endpoint + inline editor UI + backward compat
-  2. Tags support — PATCH endpoint + chip add/remove UI + server-side normalization
-  3. Sidebar visibility — compact tag badges + note indicator (✎) in sidebar list items
-  4. Search/filter extended — filter now matches notes and tags
-  5. Duplicate pack — POST /api/intent-packs/:id/duplicate + "Duplicate pack" button in detail actions
-  6. Automated coverage — 11 new unit tests (store functions) + 10 new integration tests (HTTP routes)
-- Files changed:
-  - `src/core/types.ts` — added `notes?: string` and `tags?: string[]` to StoredIntentPack
-  - `src/core/intentPackStore.ts` — added `patchIntentPack` and `duplicateIntentPack`
-  - `src/core/handler.ts` — added PATCH and POST-duplicate routes with input validation
-  - `src/intentPackStore.test.ts` — 11 new unit tests for patch and duplicate
-  - `src/server.test.ts` — 10 new integration tests for PATCH and POST-duplicate
-  - `public/index.html` — notes section, tags section, sidebar tags/indicator, filter extension, duplicate button + all new JS handlers
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (48/48 tests)
-  - CodeQL: 0 alerts
-  - Code review: 2 issues fixed (XSS via createElement, GOAL_PREVIEW_MAX_LEN constant)
-- Result: working
-- Rollback path: revert all 6 files to previous state
-
 ### Current recommended next slice
-- Scope: B13-browser is now complete — all main saved-pack UI actions (inline editors + re-run + delete + duplicate) have Playwright browser-flow coverage. Good next candidates:
-  - Pack archiving / starring (B13) — allow marking a pack as starred or archived for better curation; new field, PATCH support, sidebar indicator
-- Why now: automated browser coverage is now complete for all main flows; the next highest-ROI step is a product feature rather than test infrastructure
+- B14 — Export or sharing improvements, or a "view all" / paginated pack list once the list grows long
+- Why now: B13 is complete; the next highest-ROI step is either better export UX (copy-friendly formats) or list management as packs accumulate
 - Stop-line: do not begin a new slice in this session
 
 ## If blocked

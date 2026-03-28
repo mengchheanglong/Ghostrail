@@ -535,3 +535,81 @@ test("POST /api/intent-packs/:id/duplicate leaves the original unchanged", async
     assert.equal((body as Record<string, unknown>)["id"], stored.id, "original id unchanged");
   });
 });
+
+// ── PATCH starred and archived route tests ───────────────────
+
+test("PATCH /api/intent-packs/:id sets starred to true", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack to star via HTTP" });
+    const stored = await saveIntentPack(pack, "Pack to star via HTTP", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ starred: true })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["starred"], true);
+  });
+});
+
+test("PATCH /api/intent-packs/:id sets archived to true", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack to archive via HTTP" });
+    const stored = await saveIntentPack(pack, "Pack to archive via HTTP", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: true })
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["archived"], true);
+  });
+});
+
+test("PATCH /api/intent-packs/:id returns 400 for non-boolean starred", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Bad starred type" });
+    const stored = await saveIntentPack(pack, "Bad starred type", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ starred: "yes" })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "starred must be a boolean");
+  });
+});
+
+test("PATCH /api/intent-packs/:id returns 400 for non-boolean archived", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Bad archived type" });
+    const stored = await saveIntentPack(pack, "Bad archived type", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: 1 })
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal((body as Record<string, string>)["error"], "archived must be a boolean");
+  });
+});

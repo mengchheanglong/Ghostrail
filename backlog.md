@@ -9,11 +9,11 @@
 ## Ready
 These are good candidates for the next bounded slice.
 
-### B13 — Pack archiving / starring
-- Value: curation — allow users to mark a pack as starred or archived; useful when the pack list grows
-- Scope: new field on StoredIntentPack, PATCH support, sidebar indicator, optional filter toggle
-- Risk: low-medium (new field, new UI toggle, backward-compatible)
-- Verification: starred pack shows indicator; filter toggle works; older packs safe
+### B14 — Export or list improvements
+- Value: as packs accumulate, users need better list management or richer export; candidates include: paginated/virtualized list, bulk export, or a compact "card view" mode
+- Scope: client-side UI change or new export route; no schema change
+- Risk: low
+- Verification: list renders correctly with many packs; export route returns expected output
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -41,6 +41,9 @@ Move completed items here with short completion notes.
 
 ### B6 — Re-run from saved pack
 - Completed: "Re-run from this pack" button in detail view prefills generator form with saved goal and repositoryContext; older packs without goal disable the button gracefully; draftHint confirms the prefill; smooth scroll respects prefers-reduced-motion.
+
+### B13 — Pack archiving / starring
+- Completed: `starred?` and `archived?` fields added to `StoredIntentPack`; PATCH validates booleans; UI has ☆ Star / ★ Unstar toggle and Archive / Unarchive toggle in detail actions; archived packs hidden by default; "Show archived" checkbox in sidebar reveals them; ★ indicator in sidebar for starred packs; `getFilteredPacks()` respects archived/showArchived state; 6 new unit tests, 4 new integration tests, 3 new browser tests; 79/79 unit tests + 12/12 browser tests pass.
 
 ### B13-browser — Browser-flow tests for saved-pack action buttons (re-run, delete, duplicate)
 - Completed: `tests/browser/actions.spec.ts` added with 5 tests: re-run prefills form, re-run + generate creates new pack, delete cancel path, delete confirm removes pack, duplicate creates new pack with new ID; 9/9 browser tests pass total; 69 unit tests unchanged.

@@ -670,6 +670,7 @@
             : "No saved packs yet. Generate one above.";
           packListState.className = "state-msg";
           packListState.style.display = "";
+          packListEl.innerHTML = "";
           packListEl.style.display = "none";
           return;
         }
@@ -1283,6 +1284,78 @@
         } catch (err) {
           tagError.textContent = "Remove tag failed: " + (err.message || "unknown error");
           tagError.style.display = "";
+        }
+      });
+
+      // ── Show archived toggle ─────────────────────────────────
+      showArchivedToggle.addEventListener("change", () => {
+        showArchived = showArchivedToggle.checked;
+        const filtered = getFilteredPacks();
+        renderPackList(filtered);
+        if (selectedId && !filtered.some(p => p.id === selectedId)) {
+          clearDetail();
+        }
+      });
+
+      // ── Star / unstar pack ────────────────────────────────────
+      starBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        starBtn.disabled = true;
+        const newStarred = !selectedPack.starred;
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ starred: newStarred })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Star failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          updateCurationBtns(updated);
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          exportStatus.textContent = "Star failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          starBtn.disabled = false;
+        }
+      });
+
+      // ── Archive / unarchive pack ──────────────────────────────
+      archiveBtn.addEventListener("click", async () => {
+        if (!selectedId || !selectedPack) return;
+        archiveBtn.disabled = true;
+        const newArchived = !selectedPack.archived;
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ archived: newArchived })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Archive failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          updateCurationBtns(updated);
+          renderPackList(getFilteredPacks());
+          // If archived and "show archived" is off, pack disappears — clear detail
+          if (updated.archived && !showArchived) {
+            clearDetail();
+          }
+        } catch (err) {
+          exportStatus.textContent = "Archive failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          archiveBtn.disabled = false;
         }
       });
 
