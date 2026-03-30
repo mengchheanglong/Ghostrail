@@ -1,12 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
-import { generateIntentPack } from "./generateIntentPack.js";
 import { toGitHubIssueMarkdown } from "./issueMarkdown.js";
 import { toTaskPacketJson, toAgentPrompt } from "./taskPacket.js";
 import { toPrDescription } from "./prDescription.js";
 import { computeDriftReport } from "./driftReport.js";
 import { parseGitDiff } from "./diffParser.js";
 import { loadPolicy, applyPolicy } from "./policy.js";
+import { HeuristicProvider } from "./llmProvider.js";
+import type { LlmProvider } from "./llmProvider.js";
 import {
   saveIntentPack,
   listIntentPacks,
@@ -50,7 +51,8 @@ async function serveStatic(pathname: string, publicDir: string, res: any): Promi
   res.end(file);
 }
 
-export function createHandler(dataDir: string, publicDir: string, policyPath?: string) {
+export function createHandler(dataDir: string, publicDir: string, policyPath?: string, provider?: LlmProvider) {
+  const resolvedProvider: LlmProvider = provider ?? new HeuristicProvider();
   return async (req: any, res: any): Promise<void> => {
     try {
       const method = req.method ?? "GET";
@@ -69,7 +71,7 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
           return json(res, 400, { error: "goal is required" });
         }
 
-        const pack = generateIntentPack(body);
+        const pack = await resolvedProvider.generate(body);
         const goalText = body.goal.trim();
         const ctxText = body.repositoryContext?.trim() || undefined;
 
@@ -95,7 +97,7 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
           return json(res, 400, { error: "goal is required" });
         }
 
-        const pack = generateIntentPack(body);
+        const pack = await resolvedProvider.generate(body);
         const markdown = toGitHubIssueMarkdown(pack);
         return json(res, 200, { markdown, pack });
       }

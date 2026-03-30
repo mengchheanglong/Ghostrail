@@ -984,3 +984,100 @@ test("POST /api/intent-packs/:id/analyze-diff handles empty diff gracefully", as
     assert.equal(status, 400);
   });
 });
+
+// ── LLM provider injection ────────────────────────────────────────────────────
+
+import { StubLlmProvider } from "./core/llmProvider.js";
+
+async function withStubProviderServer(
+  fn: (baseUrl: string, dataDir: string) => Promise<void>
+): Promise<void> {
+  const dataDir = await mkdtemp(join(tmpdir(), "ghostrail-stub-provider-test-"));
+  try {
+    const handler = createHandler(dataDir, tmpdir(), undefined, new StubLlmProvider());
+    const server = createServer(handler);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const addr = server.address() as { port: number };
+    const baseUrl = `http://localhost:${addr.port}`;
+    try {
+      await fn(baseUrl, dataDir);
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((err?: Error) => (err ? reject(err) : resolve()))
+      );
+    }
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+}
+
+test("POST /api/intent-pack with stub provider returns reasoningMode llm", async () => {
+  await withStubProviderServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Add dark mode to the settings page" }),
+      }
+    );
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.equal(b["reasoningMode"], "llm");
+  });
+});
+
+test("POST /api/intent-pack with stub provider still stores the pack", async () => {
+  await withStubProviderServer(async (baseUrl, dataDir) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Enable two-factor authentication" }),
+      }
+    );
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(typeof b["id"] === "string" && b["id"].length > 0);
+    // Verify the pack was persisted
+    const { status: getStatus, body: getBody } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${b["id"]}`
+    );
+    assert.equal(getStatus, 200);
+    assert.equal((getBody as Record<string, unknown>)["reasoningMode"], "llm");
+  });
+});
+
+test("POST /api/intent-pack/export-issue with stub provider returns reasoningMode llm in pack", async () => {
+  await withStubProviderServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/export-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Migrate session storage to Redis" }),
+      }
+    );
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.equal((b["pack"] as Record<string, unknown>)["reasoningMode"], "llm");
+    assert.ok(typeof b["markdown"] === "string");
+  });
+});
+
+test("POST /api/intent-pack default (no provider) uses heuristic", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Add caching to the user profile endpoint" }),
+      }
+    );
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.equal(b["reasoningMode"], "heuristic");
+  });
+});
