@@ -18,14 +18,15 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 ---
 
 ### Idea 1 — PR Diff vs. Intent Pack Drift Detection (Verification)
-**Status**: Foundation shipped. Full engine is next.
+**Status**: ✅ Shipped (foundation + full engine).
 **Why it matters**: The killer feature. Without this, Ghostrail is documentation. With it, Ghostrail can tell you when an agent went rogue or left work incomplete.
-**Foundation shipped in this milestone**:
-- `prLink?` and `changedFiles?` stored on packs
-- `POST /api/intent-packs/:id/link-pr` to attach a PR and changed files
-- `GET /api/intent-packs/:id/drift-report` returns structured `scopeCreep` and `intentGap` arrays
-**Next step** — B15: Full drift engine that accepts actual git diff text, parses changed file paths, and runs the comparison automatically.
-**Dependencies**: None (foundation is complete; full engine needs a diff parser).
+**Shipped**:
+- `src/core/diffParser.ts` — `parseGitDiff()` extracts changed file paths from standard git diff text (modified, new, deleted, renamed, binary files; deduped, sorted)
+- `POST /api/intent-packs/:id/analyze-diff` — accepts diff text, parses files, stores changedFiles on pack, returns `{ report, changedFiles }`
+- `GET /api/intent-packs/:id/drift-report` — returns structured drift report with matchedFiles, scopeCreep, intentGap, status, summary
+- UI: paste-diff textarea + "Analyze Drift" button in detail view; renders matched/unexpected/missing buckets with color-coded status badge
+- 15 unit tests (diffParser), 7 integration tests (analyze-diff route), 4 browser tests (drift UI)
+**Next step**: None for this slice. Future enhancement: deeper semantic matching beyond token-based path matching.
 
 ### Idea 2 — AI Agent Task Packet Generator (Foundation + Workflow)
 **Status**: Shipped in this milestone.
@@ -126,6 +127,7 @@ Candidates for the next bounded slice.
 - Scope: `src/core/driftReport.ts` extension; no UI changes initially
 - Risk: medium — diff parsing can be complex; start with file-list comparison only
 - Verification: unit tests for drift comparison logic
+- **Status**: ✅ Done (see B15 in Done section)
 
 ### B-POLICY-2 — Policy warning UI
 - Value: Surface policy warnings prominently in the UI; add acknowledgement gate before "Approved"
@@ -166,6 +168,9 @@ Move an item here if it needs user/product input.
 - Next step once unblocked: accept PAT in local config, wire up issue creation
 
 ## Done
+
+### B15 — Full drift engine
+- Completed: `src/core/diffParser.ts` with `parseGitDiff()`; `POST /api/intent-packs/:id/analyze-diff`; drift UI (paste textarea + result buckets); 15 unit tests, 7 integration tests, 4 browser tests. 183/183 unit tests + 16/16 browser tests pass.
 
 ### Goal-shift milestone — Intent Guardrail System foundation
 - Completed: Phase 0 (doctrine), Phase 1 (task packet), Phase 2 (status lifecycle), Phase 3 (PR description), Phase 4 (version history), Phase 5 (drift foundation), Phase 6 (policy/protected areas)
