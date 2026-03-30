@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateIntentPack } from "./core/generateIntentPack.js";
-import { saveIntentPack, listIntentPacks, getIntentPackById, deleteIntentPack, patchIntentPack, duplicateIntentPack } from "./core/intentPackStore.js";
+import { saveIntentPack, listIntentPacks, getIntentPackById, deleteIntentPack, patchIntentPack, duplicateIntentPack, listPackHistory, linkPrToIntentPack } from "./core/intentPackStore.js";
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), "ghostrail-test-"));
@@ -522,5 +522,151 @@ test("patchIntentPack starred and archived are independent of other fields", asy
     assert.equal(patched!.archived, undefined);
     assert.equal(patched!.notes, "My note", "notes should be untouched");
     assert.deepEqual(patched!.tags, ["keep"], "tags should be untouched");
+  });
+});
+
+// ── Status tests ──────────────────────────────────────────────
+
+test("patchIntentPack sets status to approved", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Status pack" });
+    const stored = await saveIntentPack(pack, "Status pack", undefined, dir);
+    const patched = await patchIntentPack(stored.id, { status: "approved" }, dir);
+    assert.ok(patched);
+    assert.equal(patched!.status, "approved");
+  });
+});
+
+test("patchIntentPack updates status from draft to in-progress", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Status lifecycle" });
+    const stored = await saveIntentPack(pack, "Status lifecycle", undefined, dir);
+    await patchIntentPack(stored.id, { status: "draft" }, dir);
+    const patched = await patchIntentPack(stored.id, { status: "in-progress" }, dir);
+    assert.ok(patched);
+    assert.equal(patched!.status, "in-progress");
+  });
+});
+
+test("older packs without status still load safely", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Old pack" });
+    const stored = await saveIntentPack(pack, "Old pack", undefined, dir);
+    // Load fresh — no status field
+    const loaded = await getIntentPackById(stored.id, dir);
+    assert.ok(loaded);
+    assert.equal(loaded!.status, undefined, "status should be absent on old packs");
+  });
+});
+
+// ── History tests ─────────────────────────────────────────────
+
+test("listPackHistory returns empty array before any patches", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "History empty" });
+    const stored = await saveIntentPack(pack, "History empty", undefined, dir);
+    const history = await listPackHistory(stored.id, dir);
+    assert.ok(Array.isArray(history));
+    assert.equal(history!.length, 0);
+  });
+});
+
+test("listPackHistory returns one entry after a meaningful patch", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Pack to snapshot" });
+    const stored = await saveIntentPack(pack, "Pack to snapshot", undefined, dir);
+    await patchIntentPack(stored.id, { notes: "Changed" }, dir);
+    const history = await listPackHistory(stored.id, dir);
+    assert.ok(history);
+    assert.equal(history!.length, 1);
+    assert.ok(typeof history![0]!.patchedAt === "string");
+    assert.ok(history![0]!.before.id === stored.id);
+  });
+});
+
+test("listPackHistory records snapshot before the change is applied", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Original goal" });
+    const stored = await saveIntentPack(pack, "Original goal", undefined, dir);
+    // Patch the goal
+    await patchIntentPack(stored.id, { goal: "New goal" }, dir);
+    const history = await listPackHistory(stored.id, dir);
+    assert.ok(history && history.length === 1);
+    // The snapshot should contain the OLD goal
+    assert.equal(history![0]!.before.goal, "Original goal");
+  });
+});
+
+test("listPackHistory accumulates multiple entries across patches", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Multi-edit" });
+    const stored = await saveIntentPack(pack, "Multi-edit", undefined, dir);
+    await patchIntentPack(stored.id, { notes: "First change" }, dir);
+    await patchIntentPack(stored.id, { notes: "Second change" }, dir);
+    const history = await listPackHistory(stored.id, dir);
+    assert.ok(history);
+    assert.equal(history!.length, 2);
+  });
+});
+
+test("listPackHistory returns null for invalid id format", async () => {
+  await withTempDir(async (dir) => {
+    const result = await listPackHistory("not-a-valid-uuid", dir);
+    assert.equal(result, null);
+  });
+});
+
+test("non-meaningful patches (starred/archived) do not create history entries", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Curation pack" });
+    const stored = await saveIntentPack(pack, "Curation pack", undefined, dir);
+    // Starred and archived are not in the meaningful fields list
+    await patchIntentPack(stored.id, { starred: true }, dir);
+    await patchIntentPack(stored.id, { archived: true }, dir);
+    const history = await listPackHistory(stored.id, dir);
+    assert.ok(history);
+    assert.equal(history!.length, 0, "curation-only patches should not create history");
+  });
+});
+
+// ── linkPrToIntentPack tests ──────────────────────────────────
+
+test("linkPrToIntentPack stores prUrl on the pack", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Link PR" });
+    const stored = await saveIntentPack(pack, "Link PR", undefined, dir);
+    const linked = await linkPrToIntentPack(stored.id, "https://github.com/org/repo/pull/1", undefined, dir);
+    assert.ok(linked);
+    assert.equal(linked!.prLink, "https://github.com/org/repo/pull/1");
+  });
+});
+
+test("linkPrToIntentPack stores changedFiles when provided", async () => {
+  await withTempDir(async (dir) => {
+    const pack = generateIntentPack({ goal: "Link PR with files" });
+    const stored = await saveIntentPack(pack, "Link PR with files", undefined, dir);
+    const files = ["src/billing.ts", "src/payment.ts"];
+    const linked = await linkPrToIntentPack(stored.id, "https://github.com/org/repo/pull/2", files, dir);
+    assert.ok(linked);
+    assert.deepEqual(linked!.changedFiles, files);
+  });
+});
+
+test("linkPrToIntentPack returns null for non-existent valid-format uuid", async () => {
+  await withTempDir(async (dir) => {
+    const result = await linkPrToIntentPack(
+      "aaaaaaaa-0000-0000-0000-000000000099",
+      "https://github.com/org/repo/pull/1",
+      undefined,
+      dir
+    );
+    assert.equal(result, null);
+  });
+});
+
+test("linkPrToIntentPack returns null for invalid id format", async () => {
+  await withTempDir(async (dir) => {
+    const result = await linkPrToIntentPack("bad-id", "https://github.com/org/repo/pull/1", undefined, dir);
+    assert.equal(result, null);
   });
 });

@@ -2,6 +2,11 @@ import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { generateIntentPack } from "./generateIntentPack.js";
 import { toGitHubIssueMarkdown } from "./issueMarkdown.js";
+import { toTaskPacketJson, toAgentPrompt } from "./taskPacket.js";
+import { toPrDescription } from "./prDescription.js";
+import { computeDriftReport } from "./driftReport.js";
+import { parseGitDiff } from "./diffParser.js";
+import { loadPolicy, applyPolicy } from "./policy.js";
 import {
   saveIntentPack,
   listIntentPacks,
@@ -9,8 +14,11 @@ import {
   deleteIntentPack,
   patchIntentPack,
   duplicateIntentPack,
+  linkPrToIntentPack,
+  listPackHistory,
 } from "./intentPackStore.js";
-import type { IntentPackInput } from "./types.js";
+import type { IntentPackInput, PackStatus } from "./types.js";
+import { VALID_STATUSES } from "./types.js";
 
 const mimeTypes: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -42,7 +50,7 @@ async function serveStatic(pathname: string, publicDir: string, res: any): Promi
   res.end(file);
 }
 
-export function createHandler(dataDir: string, publicDir: string) {
+export function createHandler(dataDir: string, publicDir: string, policyPath?: string) {
   return async (req: any, res: any): Promise<void> => {
     try {
       const method = req.method ?? "GET";
@@ -64,7 +72,20 @@ export function createHandler(dataDir: string, publicDir: string) {
         const pack = generateIntentPack(body);
         const goalText = body.goal.trim();
         const ctxText = body.repositoryContext?.trim() || undefined;
-        const stored = await saveIntentPack(pack, goalText, ctxText, dataDir);
+
+        // Apply repo policy warnings (non-blocking)
+        let policyWarnings: string[] | undefined;
+        try {
+          const policy = await loadPolicy(policyPath);
+          if (policy) {
+            const warnings = applyPolicy(pack.touchedAreas, policy);
+            if (warnings.length > 0) policyWarnings = warnings;
+          }
+        } catch {
+          // Policy errors are non-fatal
+        }
+
+        const stored = await saveIntentPack(pack, goalText, ctxText, dataDir, policyWarnings);
         return json(res, 200, stored);
       }
 
@@ -93,8 +114,8 @@ export function createHandler(dataDir: string, publicDir: string) {
 
       if (method === "PATCH" && url.pathname.startsWith("/api/intent-packs/")) {
         const id = url.pathname.slice("/api/intent-packs/".length);
-        const body = await readJson<{ notes?: unknown; tags?: unknown; goal?: unknown; repositoryContext?: unknown; starred?: unknown; archived?: unknown }>(req);
-        const patch: { notes?: string; tags?: string[]; goal?: string; repositoryContext?: string; starred?: boolean; archived?: boolean } = {};
+        const body = await readJson<{ notes?: unknown; tags?: unknown; goal?: unknown; repositoryContext?: unknown; starred?: unknown; archived?: unknown; status?: unknown }>(req);
+        const patch: { notes?: string; tags?: string[]; goal?: string; repositoryContext?: string; starred?: boolean; archived?: boolean; status?: PackStatus } = {};
         if (body.notes !== undefined) {
           if (typeof body.notes !== "string") {
             return json(res, 400, { error: "notes must be a string" });
@@ -147,6 +168,12 @@ export function createHandler(dataDir: string, publicDir: string) {
           }
           patch.archived = body.archived;
         }
+        if (body.status !== undefined) {
+          if (typeof body.status !== "string" || !VALID_STATUSES.includes(body.status as PackStatus)) {
+            return json(res, 400, { error: `status must be one of: ${VALID_STATUSES.join(", ")}` });
+          }
+          patch.status = body.status as PackStatus;
+        }
         const updated = await patchIntentPack(id, patch, dataDir);
         if (!updated) return json(res, 404, { error: "not found" });
         return json(res, 200, updated);
@@ -160,19 +187,98 @@ export function createHandler(dataDir: string, publicDir: string) {
           if (!duplicate) return json(res, 404, { error: "not found" });
           return json(res, 200, duplicate);
         }
+        if (rest.endsWith("/link-pr")) {
+          const id = rest.slice(0, -"/link-pr".length);
+          const body = await readJson<{ prUrl?: unknown; changedFiles?: unknown }>(req);
+          if (!body.prUrl || typeof body.prUrl !== "string" || !body.prUrl.trim()) {
+            return json(res, 400, { error: "prUrl is required and must be a non-empty string" });
+          }
+          if (body.changedFiles !== undefined) {
+            if (
+              !Array.isArray(body.changedFiles) ||
+              !(body.changedFiles as unknown[]).every((f) => typeof f === "string")
+            ) {
+              return json(res, 400, { error: "changedFiles must be an array of strings" });
+            }
+          }
+          const linked = await linkPrToIntentPack(
+            id,
+            body.prUrl.trim(),
+            body.changedFiles as string[] | undefined,
+            dataDir
+          );
+          if (!linked) return json(res, 404, { error: "not found" });
+          return json(res, 200, linked);
+        }
+
+        if (rest.endsWith("/analyze-diff")) {
+          const id = rest.slice(0, -"/analyze-diff".length);
+          const body = await readJson<{ diffText?: unknown; prUrl?: unknown }>(req);
+          if (!body.diffText || typeof body.diffText !== "string" || !body.diffText.trim()) {
+            return json(res, 400, { error: "diffText is required and must be a non-empty string" });
+          }
+          const changedFiles = parseGitDiff(body.diffText);
+          const prUrl = typeof body.prUrl === "string" && body.prUrl.trim()
+            ? body.prUrl.trim()
+            : undefined;
+          const pack = await getIntentPackById(id, dataDir);
+          if (!pack) return json(res, 404, { error: "not found" });
+          // Store the parsed files (and optionally the PR link) on the pack
+          const updated = await linkPrToIntentPack(
+            id,
+            prUrl ?? pack.prLink ?? "diff-analyzed",
+            changedFiles,
+            dataDir
+          );
+          if (!updated) return json(res, 404, { error: "not found" });
+          const report = computeDriftReport(updated);
+          return json(res, 200, { report, changedFiles });
+        }
+
         return json(res, 404, { error: "not found" });
       }
 
       if (method === "GET" && url.pathname.startsWith("/api/intent-packs/")) {
         const rest = url.pathname.slice("/api/intent-packs/".length);
-        const exportIssueSuffix = "/export-issue";
 
-        if (rest.endsWith(exportIssueSuffix)) {
-          const id = rest.slice(0, -exportIssueSuffix.length);
+        if (rest.endsWith("/export-issue")) {
+          const id = rest.slice(0, -"/export-issue".length);
           const pack = await getIntentPackById(id, dataDir);
           if (!pack) return json(res, 404, { error: "not found" });
           const markdown = toGitHubIssueMarkdown(pack);
           return json(res, 200, { markdown });
+        }
+
+        if (rest.endsWith("/task-packet")) {
+          const id = rest.slice(0, -"/task-packet".length);
+          const pack = await getIntentPackById(id, dataDir);
+          if (!pack) return json(res, 404, { error: "not found" });
+          const packet = toTaskPacketJson(pack);
+          const prompt = toAgentPrompt(pack);
+          return json(res, 200, { packet, prompt });
+        }
+
+        if (rest.endsWith("/pr-description")) {
+          const id = rest.slice(0, -"/pr-description".length);
+          const pack = await getIntentPackById(id, dataDir);
+          if (!pack) return json(res, 404, { error: "not found" });
+          const markdown = toPrDescription(pack);
+          return json(res, 200, { markdown });
+        }
+
+        if (rest.endsWith("/history")) {
+          const id = rest.slice(0, -"/history".length);
+          const history = await listPackHistory(id, dataDir);
+          if (history === null) return json(res, 404, { error: "not found" });
+          return json(res, 200, history);
+        }
+
+        if (rest.endsWith("/drift-report")) {
+          const id = rest.slice(0, -"/drift-report".length);
+          const pack = await getIntentPackById(id, dataDir);
+          if (!pack) return json(res, 404, { error: "not found" });
+          const report = computeDriftReport(pack);
+          return json(res, 200, report);
         }
 
         const pack = await getIntentPackById(rest, dataDir);

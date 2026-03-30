@@ -1,84 +1,100 @@
 # Ghostrail Project Brief
 
 ## One-line idea
-Ghostrail is a GitHub-native control layer that converts messy human requests into living, reviewable change contracts for AI coding agents.
+Ghostrail is an Intent Guardrail System for AI coding work — it keeps AI-generated changes aligned with human intent at every stage of the development lifecycle.
 
-## Why this is promising
-Most AI coding tools are getting better at generating code, but the bottleneck is shifting toward:
+## The product mission
+Ghostrail is not just a pre-flight prompt generator.
+It is a full guardrail layer:
 
-- unclear intent
-- weak reviewability
-- hidden risks
-- loss of rationale
-- PR drift away from the original goal
+- **before coding**: sharpen intent, clarify scope, generate constrained task packets
+- **during coding**: enforce policy, track status, surface protected-area warnings
+- **after coding**: compare intended scope vs actual code changes, detect drift
+- **across the lifecycle**: keep versioned intent, status, and repo memory visible
 
-Ghostrail focuses on that bottleneck.
+## Why this is necessary
+Most AI coding tools are getting better at generating code. The bottleneck is now:
+
+- unclear intent before work starts
+- agents that don't know what they must NOT change
+- PRs that drift away from the original goal without anyone noticing
+- loss of rationale — why was this decision made?
+- no structured way to evaluate whether a PR actually satisfied the original intent
+
+Ghostrail is designed to sit in exactly that gap.
 
 ## The differentiated angle
-There are already adjacent tools around specs, repo memory, and guardrails.
-Ghostrail is different because it focuses on the combination of:
+There are adjacent tools around specs, repo memory, and guardrails.
+Ghostrail is different because it combines:
 
 1. **negative space capture** — explicitly record what should *not* change
-2. **agent-facing execution packs** — produce instructions that coding agents can use directly
-3. **drift checks** — compare actual code changes against the declared contract
-4. **evidence-first review** — show whether the PR really satisfied the original intent
+2. **agent-facing task packets** — produce structured instructions coding agents can use directly
+3. **lifecycle tracking** — packs evolve from Draft to Approved to In Progress to Done
+4. **drift detection** — compare actual code changes against the declared contract
+5. **policy enforcement** — repo-level rules surface warnings automatically
+6. **version history** — intent evolution is preserved and queryable
 
-## Initial product wedge
-Start with one very narrow workflow:
+## Current product state
 
-### v0 workflow
-1. User writes a feature request.
-2. Ghostrail generates an Intent Pack.
-3. Human edits or approves it.
-4. Ghostrail generates a GitHub issue body for Copilot.
-5. Copilot implements the task.
-6. Ghostrail later compares the PR against the original pack.
+Built and working:
+- Intent Pack generation (heuristic, with planned LLM upgrade path)
+- Local persistence with full CRUD
+- Saved pack browsing, filtering, starring, archiving
+- Pack editing: goal, repositoryContext, notes, tags, status
+- Agent Task Packet export (JSON + agent prompt)
+- GitHub Issue markdown export
+- PR Description markdown export
+- Pack status lifecycle (Draft → Approved → In Progress → Done)
+- Version history (snapshots on meaningful edits)
+- PR link and drift detection foundation
+- Repo policy / protected areas (ghostrail-policy.json)
 
-That wedge is narrow enough to build, but still useful immediately.
-
-## AI-native part
-This project is not just “a normal app with AI added.”
-It depends on AI for tasks that are awkward without it:
-
-- extracting hidden constraints from vague requests
-- surfacing likely risks before implementation
-- generating acceptance criteria from plain English
-- identifying missing assumptions
-- producing task-specific interface blocks or review cards
-
-## Best first users
-
-- solo builders using Copilot, Claude Code, or Codex
-- small teams drowning in vague issues and noisy PRs
-- maintainers reviewing AI-generated changes
+## The target user
+- Solo builders using Copilot, Claude Code, or Codex
+- Small teams drowning in vague issues and noisy PRs
+- Maintainers reviewing AI-generated changes
 
 ## The real product promise
-The real promise is not “generate code faster.”
-The promise is:
 
-> keep AI-generated changes aligned with intent.
+> Keep AI-generated changes aligned with intent.
+> Make every PR reviewable against a clear, structured contract.
 
-## v1 features
+## Ordered implementation roadmap
 
-- editable Intent Pack UI
-- saved project memory
-- GitHub issue export
-- PR summary evaluation
-- drift score
-- protected file zones
-- non-goal violations
+1. PR Diff vs. Intent Pack drift detection — foundations shipped; full diff engine is next
+2. AI Agent Task Packet Generator — shipped
+3. LLM integration with pre-generation clarifying questions — backlogged
+4. Repo-level constraint policy engine — foundations shipped
+5. Live goal quality score — backlogged
+6. Protected areas registry — foundations shipped via ghostrail-policy.json
+7. Pack status lifecycle — shipped
+8. Pack health score with inline improvement suggestions — backlogged
+9. One-click GitHub issue + PR description creation — PR description shipped; live GitHub API is next
+10. Intent version history with visual diff — foundations shipped; visual diff UI is next
 
-## v2 features
+## v1 milestones
+
+- [x] Intent Pack generation and editing
+- [x] Agent task packet export
+- [x] GitHub issue and PR description export
+- [x] Pack status lifecycle
+- [x] Version history snapshots
+- [x] Drift detection foundation
+- [x] Repo policy / protected areas foundation
+- [ ] LLM provider integration
+- [ ] Live goal quality score
+- [ ] Pack health score
+
+## v2 milestones
 
 - GitHub App that comments on PRs
-- evidence timeline from issue → commits → tests → PR
-- automatic missing-test warnings
-- repository policy packs
-- model-provider abstraction
+- Evidence timeline: issue → commits → tests → PR
+- Automatic missing-test warnings
+- Full drift engine (parse actual diffs)
+- Model-provider abstraction
 
-## v3 features
+## v3 milestones
 
-- multi-pack planning for larger features
-- dependency-aware touched-area prediction
-- “what changed that was never requested?” review mode
-- repository memory graph of goals, constraints, and decisions
+- Multi-pack planning for larger features
+- Dependency-aware touched-area prediction
+- Repository memory graph of goals, constraints, and decisions
