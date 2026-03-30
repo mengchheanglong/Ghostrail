@@ -135,21 +135,64 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
   - `selecting Approved with unacknowledged warnings reverts the dropdown and shows an error`
   - `after acknowledging warnings the ⚠ badge disappears and Approved status is allowed`
 
+## What was completed (continued)
+
+### B-QUALITY — Live goal quality score ✅
+- New `src/core/goalQualityScore.ts` — pure heuristic scorer:
+  - Detects vagueness signals (improve/refactor/optimize/enhance/fix things/make it better/update the system)
+  - Detects scope creep signals (and also/as well as/while we're at it/multiple "also" clauses)
+  - Rewards constraint language (do not break/preserve/backward compat) and specificity language (because/so that/in order to)
+  - Returns score 0–100, level (vague/partial/clear), and actionable suggestions
+  - Exported as TypeScript module for unit testing
+- `src/goalQualityScore.test.ts` — 20 unit tests covering all signal types, level thresholds, score clamping, edge cases
+- `public/index.html` — color-coded quality bar below goal textarea, live-updating on input:
+  - 🔴 Vague (< 35) → 🟡 Partial (35–64) → 🟢 Clear (≥ 65)
+  - Inline suggestions list shown for vague/partial goals; hidden when Clear
+  - Bar hidden until user starts typing
+- `tests/browser/quality.spec.ts` — 3 browser tests: bar hidden when empty, Vague for "Improve the dashboard", Clear for well-specified goal
+
+### B-HEALTH — Pack health score (heuristic) ✅
+- New `src/core/healthScore.ts` — pure multi-dimension scorer:
+  - **Objective Specificity**: goal length, constraint language, vagueness signals
+  - **Acceptance Criteria**: count, testable verb coverage, generic phrase detection
+  - **Constraint Completeness**: preservation language, non-goal explicitness
+  - **Risk Coverage**: count, specific failure modes, sensitive-area coverage, generic risk detection
+  - Weighted average → 0–100 overall score + level (poor/fair/good/excellent)
+- `src/healthScore.test.ts` — 17 unit tests covering each dimension and edge cases
+- `public/index.html` — collapsible "Pack Health" section in detail view:
+  - Score badge showing level (poor/fair/good/excellent) with color coding
+  - Per-dimension score bars with actionable improvement suggestions
+  - Collapses by default; header click toggles
+  - Re-renders when goal is saved
+
+### B-HISTORY-UI — Version history tab in detail view ✅
+- `public/index.html` — "Version History" section below drift analysis:
+  - Loads `GET /api/intent-packs/:id/history` on pack select and after edits
+  - Displays newest-first timeline of snapshots
+  - Each entry shows a field-by-field diff (before/after) for: goal, objective, context, notes, status, tags
+  - Shows "No history yet" for fresh packs
+  - Auto-reloads after goal/notes saves (which create history snapshots)
+- `tests/browser/history.spec.ts` — 3 browser tests: section visible, no-history message, entries after edit
+- `playwright.config.ts` — added `workers: 1` to prevent flaky parallel timeouts in this sandbox environment (25 tests with 2 workers caused intermittent 30s timeouts)
+
 ## What was verified
 - `npm run build` → passes (tsc, 0 errors)
-- `npm test` → 183/183 unit + integration tests pass (unchanged)
-- `npx playwright test` → 19/19 browser tests pass (was 16 before B-POLICY-2)
-- All existing pack behaviors preserved
+- `node --test dist/**/*.test.js` → 220/220 unit + integration tests pass (was 183 before this slice; +37 tests)
+- `npx playwright test` → 25/25 browser tests pass (was 19 before this slice; +6 tests)
+- All existing pack behaviors preserved (backward compat: new UI sections have no server-side changes)
 
 ## Where work stopped
-Clean boundary. B-POLICY-2 is complete.
+Clean boundary. B-QUALITY, B-HEALTH, and B-HISTORY-UI are all complete.
 
 ## Next recommended slice
 
-### Priority 1 — B-QUALITY: Live goal quality score
-- Pure client-side heuristic scorer runs as user types in the generator form
-- No server changes needed
-- Show a color-coded bar: 🔴 Vague → 🟡 Partial → 🟢 Clear
-- Add unit tests for scoring logic and a browser test for display
+### Priority 1 — B-LLM-1: LLM provider abstraction layer
+- Add a provider adapter in `src/core/llmProvider.ts` with a stub that can be replaced with a real model call
+- Even without credentials, the stub lets us test the integration boundary
+- Requires external LLM API key to go live
 
-### Priority 2 — B-HEALTH: Pack health score
+### Priority 2 — B-GH-LIVE: Live GitHub issue creation
+- Accept a GitHub PAT in local config
+- Wire up `POST /repos/:owner/:repo/issues` via GitHub API
+- Save returned issue URL on the pack
+- Requires GitHub PAT

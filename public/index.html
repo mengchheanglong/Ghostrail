@@ -328,7 +328,135 @@
         line-height: 1.55;
       }
 
-      /* ── Drift analysis section ── */
+      /* ── Goal quality score bar ── */
+      .quality-bar-wrap {
+        margin: 8px 0 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .quality-bar-track {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      .quality-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.25s ease, background 0.25s ease;
+      }
+      .quality-bar-fill.quality-vague   { background: #f87171; }
+      .quality-bar-fill.quality-partial { background: #fbbf24; }
+      .quality-bar-fill.quality-clear   { background: #34d399; }
+      .quality-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        min-width: 52px;
+        text-align: right;
+      }
+      .quality-label.quality-vague   { color: #f87171; }
+      .quality-label.quality-partial { color: #fbbf24; }
+      .quality-label.quality-clear   { color: #34d399; }
+      .quality-suggestions {
+        margin: 6px 0 0;
+        padding-left: 16px;
+      }
+      .quality-suggestions li {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        line-height: 1.5;
+      }
+
+      /* ── Pack health section ── */
+      .health-section {
+        margin: 20px 0 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 16px;
+      }
+      .health-section-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .health-section-header h3 {
+        margin: 0;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+        flex: 1;
+      }
+      .health-score-badge {
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 6px;
+        min-width: 36px;
+        text-align: center;
+      }
+      .health-poor      { background: rgba(248, 113, 113, 0.15); color: #fca5a5; }
+      .health-fair      { background: rgba(251, 191, 36, 0.15); color: #fcd34d; }
+      .health-good      { background: rgba(96, 165, 250, 0.15); color: #93c5fd; }
+      .health-excellent { background: rgba(52, 211, 153, 0.15); color: #6ee7b7; }
+      .health-chevron {
+        font-size: 0.75rem;
+        color: #6b7280;
+        transition: transform 0.2s;
+      }
+      .health-chevron.open { transform: rotate(180deg); }
+      .health-body {
+        margin-top: 10px;
+      }
+      .health-dim {
+        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .health-dim-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .health-dim-name {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #d1d5db;
+        flex: 1;
+      }
+      .health-dim-score {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #9ca3af;
+      }
+      .health-dim-bar-track {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+        margin-bottom: 5px;
+      }
+      .health-dim-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+      .health-dim-suggestions {
+        margin: 4px 0 0;
+        padding-left: 14px;
+      }
+      .health-dim-suggestions li {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        line-height: 1.5;
+      }
+
       .drift-section {
         margin: 20px 0 0;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -413,6 +541,60 @@
         font-size: 0.8rem;
         color: #d1d5db;
         line-height: 1.5;
+      }
+
+      /* ── Version history section ── */
+      .history-entry {
+        margin: 0 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .history-entry-header {
+        padding: 7px 12px;
+        font-size: 0.78rem;
+        color: #9ca3af;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .history-entry-time {
+        color: #6b7280;
+        font-size: 0.75rem;
+      }
+      .history-diff-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+      .history-diff-row td {
+        padding: 4px 12px;
+        vertical-align: top;
+        line-height: 1.5;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      }
+      .history-diff-field {
+        width: 110px;
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+      }
+      .history-diff-before {
+        color: #fca5a5;
+        word-break: break-word;
+      }
+      .history-diff-after {
+        color: #6ee7b7;
+        word-break: break-word;
+      }
+      .history-no-changes {
+        font-size: 0.8rem;
+        color: #6b7280;
+        padding: 4px 12px 8px;
       }
 
       /* ── Notes section ── */
@@ -614,6 +796,13 @@
       <div class="card">
         <h2>Feature request</h2>
         <textarea id="goal" placeholder="Example: Add subscription upgrade flow but do not break current billing or admin behavior."></textarea>
+        <div id="qualityBarWrap" class="quality-bar-wrap" style="display:none">
+          <div class="quality-bar-track">
+            <div id="qualityBarFill" class="quality-bar-fill quality-vague" style="width:0%"></div>
+          </div>
+          <span id="qualityLabel" class="quality-label quality-vague">Vague</span>
+        </div>
+        <ul id="qualitySuggestions" class="quality-suggestions" style="display:none"></ul>
         <textarea id="context" placeholder="Optional repository context: tech stack, sensitive areas, business rules..."></textarea>
         <button id="generate">Generate &amp; Save Intent Pack</button>
         <p id="draftHint" class="draft-hint" style="display:none">↑ Loaded inputs from saved pack — edit freely then generate.</p>
@@ -747,6 +936,22 @@
               </div>
               <div id="driftResult" style="display:none"></div>
             </div>
+
+            <!-- Pack health section -->
+            <div id="healthSection" class="health-section" style="display:none">
+              <div class="health-section-header" id="healthToggle">
+                <h3>Pack Health</h3>
+                <span id="healthScoreBadge" class="health-score-badge health-fair">—</span>
+                <span id="healthChevron" class="health-chevron">▼</span>
+              </div>
+              <div id="healthBody" class="health-body" style="display:none"></div>
+            </div>
+
+            <!-- Version history section -->
+            <div id="historySection" class="drift-section" style="display:none">
+              <h3>Version History</h3>
+              <div id="historyContent"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -813,6 +1018,17 @@
       const driftInput     = document.getElementById("driftInput");
       const analyzeDriftBtn = document.getElementById("analyzeDriftBtn");
       const driftResult    = document.getElementById("driftResult");
+      const qualityBarWrap = document.getElementById("qualityBarWrap");
+      const qualityBarFill = document.getElementById("qualityBarFill");
+      const qualityLabel   = document.getElementById("qualityLabel");
+      const qualitySuggestions = document.getElementById("qualitySuggestions");
+      const healthSection  = document.getElementById("healthSection");
+      const healthToggle   = document.getElementById("healthToggle");
+      const healthScoreBadge = document.getElementById("healthScoreBadge");
+      const healthChevron  = document.getElementById("healthChevron");
+      const healthBody     = document.getElementById("healthBody");
+      const historySection = document.getElementById("historySection");
+      const historyContent = document.getElementById("historyContent");
 
       // Track the currently selected pack id, full object, and the full unfiltered list
       let selectedId   = null;
@@ -820,6 +1036,7 @@
       let allPacks     = [];
       let pendingDelete = false;
       let showArchived  = false;
+      let healthOpen   = false;
       const acknowledgedPackIds = new Set(); // packs where policy warnings have been acknowledged this session
 
       const GOAL_PREVIEW_MAX_LEN = 60;
@@ -1096,6 +1313,13 @@
         driftInput.value = "";
         driftResult.style.display = "none";
         driftResult.innerHTML = "";
+        // Pack health section
+        healthOpen = false;
+        healthBody.style.display = "none";
+        healthChevron.className = "health-chevron";
+        renderHealthSection(pack);
+        // Version history section
+        loadHistory(pack);
       }
 
       function clearDetail() {
@@ -1134,6 +1358,10 @@
         driftInput.value = "";
         driftResult.style.display = "none";
         driftResult.innerHTML = "";
+        healthSection.style.display = "none";
+        healthBody.innerHTML = "";
+        historySection.style.display = "none";
+        historyContent.innerHTML = "";
       }
 
       // ── Prefill generator form from a saved pack ─────────────
@@ -1592,7 +1820,9 @@
           if (idx !== -1) allPacks[idx] = updated;
           updateRerunBtn(updated);
           renderGoalSection(updated);
+          renderHealthSection(updated);
           renderPackList(getFilteredPacks());
+          loadHistory(updated);
         } catch (err) {
           goalEditError.textContent = "Save failed: " + (err.message || "unknown error");
           goalEditError.style.display = "";
@@ -1684,6 +1914,7 @@
           if (idx !== -1) allPacks[idx] = updated;
           renderNotesSection(updated);
           renderPackList(getFilteredPacks());
+          loadHistory(updated);
         } catch (err) {
           exportStatus.textContent = "Save notes failed: " + (err.message || "unknown error");
           exportStatus.className = "export-status error";
@@ -1833,6 +2064,277 @@
           archiveBtn.disabled = false;
         }
       });
+
+      // ── Goal quality scorer (client-side, mirrors src/core/goalQualityScore.ts) ──
+      const VAGUE_SIGNALS = [
+        { pattern: /\b(improve|improvements?)\b/i, suggestion: 'Replace "improve" with a specific outcome (e.g. "reduce load time by 50%").' },
+        { pattern: /\b(refactor|clean\s+up|tidy\s+up)\b/i, suggestion: 'Replace "refactor" with the behavior change the refactor enables.' },
+        { pattern: /\bfix\s+(things?|stuff|it|this|that|issues?|bugs?|problems?)\b/i, suggestion: 'Specify exactly what is broken and what the correct behavior should be.' },
+        { pattern: /\b(optimize|optimization)\b/i, suggestion: 'Specify what metric to optimize and by how much.' },
+        { pattern: /\b(enhance|enhancement)\b/i, suggestion: 'Replace "enhance" with the concrete capability being added.' },
+        { pattern: /\b(update|updates?)\s+(the\s+)?(code|system|app|site)\b/i, suggestion: 'Describe what the update changes, not that it changes something.' },
+        { pattern: /\bmake\s+(?:\w+\s+){0,3}(?:better|faster|nicer|cleaner)\b/i, suggestion: '"Better" is not measurable — specify the target quality or metric.' },
+      ];
+      const SCOPE_CREEP_SIGNALS = [
+        { pattern: /\band\s+also\b/i, suggestion: 'Consider splitting compound goals — "and also" often signals two separate requests.' },
+        { pattern: /\bas\s+well\s+as\b/i, suggestion: 'Consider splitting compound goals — "as well as" often signals two separate requests.' },
+        { pattern: /\bwhile\s+(we('re|re)|you('re|re)|I('m|m))\s+at\s+it\b/i, suggestion: "Track \"while we're at it\" additions separately to keep the scope bounded." },
+        { pattern: /\balso\b.*\balso\b/i, suggestion: 'Multiple "also" clauses suggest the scope may be wider than intended.' },
+      ];
+      const CONSTRAINT_SIGNALS = [
+        /\bdo\s+not\s+break\b/i, /\bwithout\s+breaking\b/i, /\bmust\s+not\b/i,
+        /\bshould\s+not\b/i, /\bbackward[\s-]?compat/i, /\bexisting\b/i,
+        /\bcurrent\b/i, /\bpreserve\b/i, /\bkeep\b/i,
+      ];
+      const SPECIFICITY_SIGNALS = [
+        /\bbecause\b/i, /\bso\s+that\b/i, /\bin\s+order\s+to\b/i,
+        /\bwhen\b/i, /\bif\b/i, /\bonly\b/i, /\bexcept\b/i, /\bbut\s+not\b/i,
+      ];
+
+      function scoreGoalQuality(goal) {
+        const text = goal.trim();
+        if (!text) return { score: 0, level: "vague", suggestions: ["Describe what you want to build or change."] };
+        let score = 30;
+        const suggestions = [];
+        for (const { pattern, suggestion } of VAGUE_SIGNALS) {
+          if (pattern.test(text)) { score -= 12; suggestions.push(suggestion); }
+        }
+        for (const { pattern, suggestion } of SCOPE_CREEP_SIGNALS) {
+          if (pattern.test(text)) { score -= 8; suggestions.push(suggestion); }
+        }
+        score += Math.min(CONSTRAINT_SIGNALS.filter(p => p.test(text)).length, 3) * 8;
+        score += Math.min(SPECIFICITY_SIGNALS.filter(p => p.test(text)).length, 3) * 6;
+        if (text.length >= 80) score += 10;
+        else if (text.length >= 40) score += 5;
+        if (text.length < 20) {
+          score -= 10;
+          if (!suggestions.some(s => s.toLowerCase().includes("describe"))) {
+            suggestions.push("Add more detail — short goals are usually too vague to act on safely.");
+          }
+        }
+        score = Math.max(0, Math.min(100, score));
+        const level = score >= 65 ? "clear" : score >= 35 ? "partial" : "vague";
+        return { score, level, suggestions: level === "clear" ? [] : suggestions };
+      }
+
+      function updateQualityBar() {
+        const goal = goalInput.value;
+        if (!goal.trim()) {
+          qualityBarWrap.style.display = "none";
+          qualitySuggestions.style.display = "none";
+          return;
+        }
+        const { score, level, suggestions } = scoreGoalQuality(goal);
+        qualityBarWrap.style.display = "";
+        qualityBarFill.style.width = score + "%";
+        qualityBarFill.className = "quality-bar-fill quality-" + level;
+        const labels = { vague: "Vague", partial: "Partial", clear: "Clear" };
+        qualityLabel.textContent = labels[level] || level;
+        qualityLabel.className = "quality-label quality-" + level;
+        if (suggestions.length > 0) {
+          qualitySuggestions.innerHTML = suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join("");
+          qualitySuggestions.style.display = "";
+        } else {
+          qualitySuggestions.style.display = "none";
+        }
+      }
+
+      goalInput.addEventListener("input", updateQualityBar);
+
+      // ── Pack health renderer ──────────────────────────────────
+      function healthBarColor(score) {
+        if (score >= 80) return "#34d399";
+        if (score >= 60) return "#60a5fa";
+        if (score >= 35) return "#fbbf24";
+        return "#f87171";
+      }
+
+      function renderHealthSection(pack) {
+        // Compute health score client-side (mirrors computePackHealth in healthScore.ts)
+        const dims = [
+          scoreObjSpecificity(pack),
+          scoreAccCriteria(pack),
+          scoreConstraints(pack),
+          scoreRisks(pack),
+        ];
+        const weights = [0.30, 0.30, 0.20, 0.20];
+        let wsum = 0;
+        for (let i = 0; i < dims.length; i++) wsum += dims[i].score * weights[i];
+        const overall = Math.round(wsum);
+        const level = overall >= 80 ? "excellent" : overall >= 60 ? "good" : overall >= 35 ? "fair" : "poor";
+        const levelLabels = { poor: "Poor", fair: "Fair", good: "Good", excellent: "Excellent" };
+
+        healthScoreBadge.textContent = overall + " – " + levelLabels[level];
+        healthScoreBadge.className = "health-score-badge health-" + level;
+        healthSection.style.display = "";
+
+        healthBody.innerHTML = dims.map(dim => {
+          const bar = `<div class="health-dim-bar-track"><div class="health-dim-bar-fill" style="width:${dim.score}%;background:${healthBarColor(dim.score)}"></div></div>`;
+          const sugs = dim.suggestions.length > 0
+            ? `<ul class="health-dim-suggestions">${dim.suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join("")}</ul>`
+            : "";
+          return `<div class="health-dim"><div class="health-dim-header"><span class="health-dim-name">${escapeHtml(dim.name)}</span><span class="health-dim-score">${dim.score}/100</span></div>${bar}${sugs}</div>`;
+        }).join("");
+      }
+
+      // Inline dimension scorers (mirrors src/core/healthScore.ts)
+      function scoreObjSpecificity(pack) {
+        const text = (pack.goal || pack.objective || "").trim();
+        if (!text) return { name: "Objective Specificity", score: 0, suggestions: ["Add an original goal to the pack."] };
+        let score = 40;
+        const suggestions = [];
+        if (text.length >= 100) score += 25;
+        else if (text.length >= 60) score += 15;
+        else if (text.length >= 30) score += 5;
+        else suggestions.push("The goal is very short — add more context about what success looks like.");
+        if (/\b(improve|refactor|optimize|enhance|fix things|make it better|update the (code|system|app))\b/i.test(text)) {
+          score -= 20;
+          suggestions.push("The goal uses vague language (improve/refactor/optimize). Replace with a specific outcome.");
+        }
+        if (/\bdo\s+not\s+break\b|\bwithout\s+breaking\b|\bmust\s+not\b|\bpreserve\b|\bbackward[\s-]?compat/i.test(text)) score += 15;
+        if (/\bbecause\b|\bso\s+that\b|\bin\s+order\s+to\b/i.test(text)) score += 10;
+        score = Math.max(0, Math.min(100, score));
+        if (score < 80 && suggestions.length === 0) suggestions.push("Add a 'because' or 'so that' clause to explain why this change is needed.");
+        return { name: "Objective Specificity", score, suggestions: score >= 80 ? [] : suggestions };
+      }
+
+      function scoreAccCriteria(pack) {
+        const criteria = Array.isArray(pack.acceptanceCriteria) ? pack.acceptanceCriteria : [];
+        if (criteria.length === 0) return { name: "Acceptance Criteria", score: 0, suggestions: ["Add at least one acceptance criterion."] };
+        let score = 20;
+        const suggestions = [];
+        if (criteria.length >= 4) score += 30;
+        else if (criteria.length >= 2) score += 20;
+        else score += 10;
+        const testable = /\b(returns?|displays?|shows?|hides?|redirects?|saves?|creates?|deletes?|updates?|fails?|throws?|logs?|sends?|receives?|verif|assert|check|confirm|valid|test|pass|succeed|works?|allow|prevent|block|enforce|trigger|emit)\b/i;
+        const testableCnt = criteria.filter(c => testable.test(c)).length;
+        if (testableCnt >= criteria.length * 0.7) score += 30;
+        else if (testableCnt >= criteria.length * 0.4) { score += 15; suggestions.push("Some criteria are hard to test — phrase them as observable outcomes (e.g. 'Returns X when Y')."); }
+        else suggestions.push("Most criteria are not phrased as observable outcomes. Start each with a verb (Returns, Shows, Prevents…).");
+        const genericPat = /\b(works?|functions?|is correct|is working|is done|is complete|behaves? correctly|is implemented)\b/i;
+        const genericCnt = criteria.filter(c => genericPat.test(c)).length;
+        if (genericCnt > 0) { score -= genericCnt * 8; suggestions.push("Some criteria are generic ('works correctly'). Replace with specific, verifiable conditions."); }
+        score = Math.max(0, Math.min(100, score));
+        return { name: "Acceptance Criteria", score, suggestions: score >= 80 ? [] : suggestions };
+      }
+
+      function scoreConstraints(pack) {
+        const constraints = Array.isArray(pack.constraints) ? pack.constraints : [];
+        const nonGoals = Array.isArray(pack.nonGoals) ? pack.nonGoals : [];
+        if (constraints.length === 0 && nonGoals.length === 0) return { name: "Constraint Completeness", score: 0, suggestions: ["Add at least one constraint to define what must not change."] };
+        let score = 20;
+        const suggestions = [];
+        const total = constraints.length + nonGoals.length;
+        if (total >= 5) score += 40;
+        else if (total >= 3) score += 25;
+        else score += 10;
+        const preservePat = /\b(preserve|maintain|keep|do\s+not\s+(break|change|alter|modify|remove|delete)|without\s+breaking|backward[\s-]?compat|existing|current behavior)\b/i;
+        if (constraints.some(c => preservePat.test(c))) score += 20;
+        else if (constraints.length > 0) suggestions.push("Add a constraint that explicitly preserves existing behavior (e.g. 'Do not break existing X').");
+        const outPat = /\b(do\s+not|don't|not\s+in\s+scope|out\s+of\s+scope|excluded|not\s+required|skip|avoid)\b/i;
+        if (nonGoals.some(ng => outPat.test(ng))) score += 10;
+        else if (nonGoals.length > 0) suggestions.push("Non-goals should explicitly say what is excluded (e.g. 'Do not redesign the admin UI').");
+        if (nonGoals.length === 0) suggestions.push("Add non-goals to clarify what is explicitly out of scope for this pack.");
+        score = Math.max(0, Math.min(100, score));
+        return { name: "Constraint Completeness", score, suggestions: score >= 80 ? [] : suggestions };
+      }
+
+      function scoreRisks(pack) {
+        const risks = Array.isArray(pack.risks) ? pack.risks : [];
+        const touchedAreas = Array.isArray(pack.touchedAreas) ? pack.touchedAreas : [];
+        if (risks.length === 0) return { name: "Risk Coverage", score: 0, suggestions: ["Add at least one risk to surface what could go wrong."] };
+        let score = 20;
+        const suggestions = [];
+        if (risks.length >= 4) score += 30;
+        else if (risks.length >= 2) score += 20;
+        else score += 10;
+        const specificPat = /\b(regression|break|fail|corrupt|expose|leak|unauthori[sz]ed|overflow|conflict|race|inconsistent|missing|stale|deadlock|timeout|loop|cascade|drift)\b/i;
+        const specific = risks.filter(r => specificPat.test(r)).length;
+        if (specific >= risks.length * 0.5) score += 25;
+        else suggestions.push("Risks should name specific failure modes (regression, data corruption, auth bypass…).");
+        const sensitiveAreas = ["billing","payment","auth","authentication","admin","database","schema","security"];
+        const touchedSensitive = touchedAreas.filter(a => sensitiveAreas.some(s => a.toLowerCase().includes(s)));
+        if (touchedSensitive.length > 0) {
+          const riskText = risks.join(" ").toLowerCase();
+          const covered = touchedSensitive.filter(a => sensitiveAreas.some(s => a.toLowerCase().includes(s) && riskText.includes(s)));
+          if (covered.length < touchedSensitive.length) { score -= 10; suggestions.push(`Pack touches sensitive areas (${touchedSensitive.join(", ")}) — add explicit risks for each.`); }
+          else score += 10;
+        }
+        const genericPat = /\b(something might go wrong|unexpected behavior|could cause issues|may break|might break)\b/i;
+        const genericCnt = risks.filter(r => genericPat.test(r)).length;
+        if (genericCnt > 0) { score -= genericCnt * 8; suggestions.push("Replace generic risks ('might break') with specific failure modes."); }
+        score = Math.max(0, Math.min(100, score));
+        return { name: "Risk Coverage", score, suggestions: score >= 80 ? [] : suggestions };
+      }
+
+      healthToggle.addEventListener("click", () => {
+        healthOpen = !healthOpen;
+        healthBody.style.display = healthOpen ? "" : "none";
+        healthChevron.className = "health-chevron" + (healthOpen ? " open" : "");
+      });
+
+      // ── Version history renderer ──────────────────────────────
+      const HISTORY_FIELDS = [
+        { key: "goal", label: "Goal" },
+        { key: "objective", label: "Objective" },
+        { key: "repositoryContext", label: "Context" },
+        { key: "notes", label: "Notes" },
+        { key: "status", label: "Status" },
+        { key: "tags", label: "Tags" },
+      ];
+
+      function historyFieldValue(entry, key) {
+        const val = entry[key];
+        if (val === undefined || val === null) return "";
+        if (Array.isArray(val)) return val.join(", ");
+        return String(val);
+      }
+
+      function renderHistoryEntry(current, before, patchedAt) {
+        const changedRows = [];
+        for (const { key, label } of HISTORY_FIELDS) {
+          const bval = historyFieldValue(before, key);
+          const cval = historyFieldValue(current, key);
+          if (bval !== cval) {
+            changedRows.push(`<tr class="history-diff-row"><td class="history-diff-field">${escapeHtml(label)}</td><td class="history-diff-before">${escapeHtml(bval || "(empty)")}</td><td class="history-diff-after">${escapeHtml(cval || "(empty)")}</td></tr>`);
+          }
+        }
+        const body = changedRows.length > 0
+          ? `<table class="history-diff-table">${changedRows.join("")}</table>`
+          : `<div class="history-no-changes">No tracked field changes in this snapshot.</div>`;
+        return `
+          <div class="history-entry">
+            <div class="history-entry-header">
+              <span>Snapshot</span>
+              <span class="history-entry-time">${escapeHtml(formatDate(patchedAt))}</span>
+              <span style="color:#6b7280;font-size:0.7rem;margin-left:auto">← before / after →</span>
+            </div>
+            ${body}
+          </div>`;
+      }
+
+      async function loadHistory(pack) {
+        historySection.style.display = "";
+        historyContent.innerHTML = `<div class="state-msg" style="font-size:0.82rem;padding:8px 0">Loading history…</div>`;
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(pack.id) + "/history");
+          if (!res.ok) throw new Error("Server returned " + res.status);
+          const entries = await res.json();
+          if (!entries || entries.length === 0) {
+            historyContent.innerHTML = `<div class="state-msg" style="font-size:0.82rem;padding:8px 0 0">No history yet — snapshots are saved automatically when you edit this pack.</div>`;
+            return;
+          }
+          // entries are oldest first; display newest first
+          const reversed = [...entries].reverse();
+          historyContent.innerHTML = reversed.map((entry, idx) => {
+            const next = reversed[idx - 1];
+            const currentState = next ? next.before : pack;
+            return renderHistoryEntry(currentState, entry.before, entry.patchedAt);
+          }).join("");
+        } catch (err) {
+          historyContent.innerHTML = `<div class="state-msg error" style="font-size:0.82rem">Failed to load history: ${escapeHtml(err.message || "unknown error")}</div>`;
+        }
+      }
 
       // ── Boot ─────────────────────────────────────────────────
       loadPacks();

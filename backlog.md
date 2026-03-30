@@ -57,15 +57,12 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 **Dependencies**: Foundation is complete.
 
 ### Idea 5 — Live Goal Quality Score (Intelligence)
-**Status**: Backlogged.
+**Status**: ✅ Shipped (B-QUALITY).
 **Why it matters**: Intervening at input time is cheaper than post-hoc debugging. A real-time quality score trains users to write better goals before generation.
-**Recommended approach**:
-1. Add a client-side quality scorer that runs as the user types
-2. Detect: ambiguity signals ("improve", "refactor", "fix things"), scope creep signals ("and also", "as well as"), missing constraint indicators
-3. Show a color-coded bar: 🔴 Vague → 🟡 Partial → 🟢 Clear
-4. Provide specific inline suggestions
-**Dependencies**: Can be implemented purely client-side. No server changes required.
-**Next step** — B-QUALITY: Pure client-side quality scorer added to the generator form.
+**Shipped**:
+- `src/core/goalQualityScore.ts` — pure heuristic scorer (vagueness, scope creep, constraint/specificity signals, 0–100 score + level + suggestions)
+- `public/index.html` — live color-coded quality bar below goal textarea (🔴 Vague → 🟡 Partial → 🟢 Clear) with actionable suggestions
+- 20 unit tests; 3 browser tests
 
 ### Idea 6 — Protected Areas Registry (Policy)
 **Status**: Foundation shipped in this milestone (via ghostrail-policy.json).
@@ -86,15 +83,12 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Filter by status in sidebar
 
 ### Idea 8 — Pack Health Score with Inline Improvement Suggestions (Intelligence)
-**Status**: Backlogged.
+**Status**: ✅ Shipped (B-HEALTH).
 **Why it matters**: Makes pack quality measurable and improvable. Users get specific feedback on what makes a pack good.
-**Recommended approach**:
-1. `src/core/healthScore.ts` — pure function that scores a pack across dimensions
-2. Dimensions: objective specificity, acceptance criteria testability, constraint completeness, risk coverage
-3. Returns a score (0–100) and specific improvement suggestions per dimension
-4. Surface in detail view as a collapsible "Pack Health" section
-**Dependencies**: Can be implemented without LLM — pure heuristic version first.
-**Next step** — B-HEALTH: Implement heuristic health scorer as a pure function with tests.
+**Shipped**:
+- `src/core/healthScore.ts` — pure 4-dimension scorer (Objective Specificity, Acceptance Criteria, Constraint Completeness, Risk Coverage); 0–100 score + level + per-dimension suggestions
+- `public/index.html` — collapsible "Pack Health" section in detail view with score badge and per-dimension bars
+- 17 unit tests
 
 ### Idea 9 — One-Click GitHub Issue + PR Description Creation (Workflow)
 **Status**: PR description export shipped. Live GitHub API is next (requires credentials).
@@ -107,15 +101,11 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 **Dependencies**: Requires a GitHub PAT; keep local-only for security.
 
 ### Idea 10 — Intent Version History with Visual Diff (Foundation + Workflow)
-**Status**: Foundation shipped in this milestone. Visual diff UI is next.
+**Status**: ✅ Fully shipped (foundation + B-HISTORY-UI).
 **Why it matters**: Intent changes are invisible in every existing system. Version-diffed packs give teams a record of how their thinking evolved.
-**Foundation shipped**:
-- `saveHistorySnapshot()` called in `patchIntentPack` before every meaningful edit
-- History stored as `{id}.history.json` — array of `{patchedAt, before}` entries
-- `listPackHistory()` function
-- `GET /api/intent-packs/:id/history` returns history array
-**Next step** — B-HISTORY-UI: History tab in detail view shows a timeline of snapshots with a structured field-by-field diff.
-**Dependencies**: Foundation is complete.
+**Shipped**:
+- Foundation: `saveHistorySnapshot()` in `patchIntentPack`; `{id}.history.json` storage; `listPackHistory()`; `GET /api/intent-packs/:id/history`
+- B-HISTORY-UI: "Version History" section in detail view — newest-first timeline of snapshots with field-by-field before/after diffs; auto-reloads after edits; 3 browser tests
 
 ---
 
@@ -141,18 +131,21 @@ Candidates for the next bounded slice.
 - Scope: pure client-side; no server changes
 - Risk: low
 - Verification: unit tests for scoring logic; browser test for display
+- **Status**: ✅ Done (see B-QUALITY in Done section)
 
 ### B-HEALTH — Pack health score (heuristic)
 - Value: Per-pack quality measurement with specific improvement suggestions
 - Scope: new `src/core/healthScore.ts`; detail view section
 - Risk: low
 - Verification: unit tests for scorer
+- **Status**: ✅ Done (see B-HEALTH in Done section)
 
 ### B-HISTORY-UI — Version history tab in detail view
 - Value: Surfaces the stored history with structured field diffs
 - Scope: UI-only; history API already exists
 - Risk: low
 - Verification: browser test for history tab
+- **Status**: ✅ Done (see B-HISTORY-UI in Done section)
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -172,6 +165,15 @@ Move an item here if it needs user/product input.
 
 ### B-POLICY-2 — Policy warning UI acknowledgement
 - Completed: `⚠` badge in sidebar; "Acknowledge Warnings" button in detail view; gate on "Approved" status; 3 browser tests. 183/183 unit tests + 19/19 browser tests pass.
+
+### B-QUALITY — Live goal quality score
+- Completed: `src/core/goalQualityScore.ts` (pure heuristic scorer); `src/goalQualityScore.test.ts` (20 unit tests); color-coded quality bar + inline suggestions in `public/index.html`; `tests/browser/quality.spec.ts` (3 browser tests). 220/220 unit tests + 25/25 browser tests pass.
+
+### B-HEALTH — Pack health score (heuristic)
+- Completed: `src/core/healthScore.ts` (4-dimension pure scorer); `src/healthScore.test.ts` (17 unit tests); collapsible "Pack Health" section in detail view. 220/220 unit tests + 25/25 browser tests pass.
+
+### B-HISTORY-UI — Version history tab in detail view
+- Completed: "Version History" section in detail view; loads `GET /api/intent-packs/:id/history`; field-by-field diff timeline; `tests/browser/history.spec.ts` (3 browser tests). 220/220 unit tests + 25/25 browser tests pass.
 
 ### B15 — Full drift engine
 - Completed: `src/core/diffParser.ts` with `parseGitDiff()`; `POST /api/intent-packs/:id/analyze-diff`; drift UI (paste textarea + result buckets); 15 unit tests, 7 integration tests, 4 browser tests. 183/183 unit tests + 16/16 browser tests pass.
