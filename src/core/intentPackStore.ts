@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { IntentPack, StoredIntentPack } from "./types.js";
+import type { IntentPack, StoredIntentPack, PackStatus } from "./types.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 // Resolves to <project-root>/data/intent-packs when running from dist/core/
@@ -17,7 +17,8 @@ export async function saveIntentPack(
   pack: IntentPack,
   goal?: string,
   repositoryContext?: string,
-  dataDir?: string
+  dataDir?: string,
+  policyWarnings?: string[]
 ): Promise<StoredIntentPack> {
   const dir = dataDir ?? defaultDataDir;
   await ensureDir(dir);
@@ -28,6 +29,7 @@ export async function saveIntentPack(
     createdAt,
     ...(goal !== undefined ? { goal } : {}),
     ...(repositoryContext !== undefined ? { repositoryContext } : {}),
+    ...(policyWarnings && policyWarnings.length > 0 ? { policyWarnings } : {}),
     ...pack,
   };
   await writeFile(join(dir, `${id}.json`), JSON.stringify(stored, null, 2), "utf8");
@@ -84,7 +86,7 @@ export async function deleteIntentPack(
 
 export async function patchIntentPack(
   id: string,
-  patch: { notes?: string; tags?: string[]; goal?: string; repositoryContext?: string; starred?: boolean; archived?: boolean },
+  patch: { notes?: string; tags?: string[]; goal?: string; repositoryContext?: string; starred?: boolean; archived?: boolean; status?: PackStatus },
   dataDir = defaultDataDir
 ): Promise<StoredIntentPack | null> {
   if (!uuidPattern.test(id)) return null;
@@ -96,6 +98,18 @@ export async function patchIntentPack(
   } catch {
     return null;
   }
+
+  // Snapshot the current state before applying changes (version history)
+  const meaningfulFields: (keyof StoredIntentPack)[] = [
+    "goal", "repositoryContext", "notes", "tags", "status",
+  ];
+  const hasMeaningfulChange = meaningfulFields.some(
+    (f) => f in patch && (patch as Record<string, unknown>)[f] !== undefined
+  );
+  if (hasMeaningfulChange) {
+    await appendHistorySnapshot(id, stored, dataDir);
+  }
+
   if (patch.notes !== undefined) {
     stored.notes = patch.notes;
   }
@@ -126,6 +140,9 @@ export async function patchIntentPack(
       delete stored.archived;
     }
   }
+  if (patch.status !== undefined) {
+    stored.status = patch.status;
+  }
   await writeFile(filePath, JSON.stringify(stored, null, 2), "utf8");
   return stored;
 }
@@ -143,4 +160,78 @@ export async function duplicateIntentPack(
   await ensureDir(dir);
   await writeFile(join(dir, `${newId}.json`), JSON.stringify(duplicate, null, 2), "utf8");
   return duplicate;
+}
+
+// ── History snapshots ─────────────────────────────────────────
+
+export interface HistoryEntry {
+  patchedAt: string;
+  before: StoredIntentPack;
+}
+
+async function appendHistorySnapshot(
+  id: string,
+  snapshot: StoredIntentPack,
+  dataDir: string
+): Promise<void> {
+  const historyPath = join(dataDir, `${id}.history.json`);
+  let history: HistoryEntry[] = [];
+  try {
+    const raw = await readFile(historyPath, "utf8");
+    history = JSON.parse(raw) as HistoryEntry[];
+    if (!Array.isArray(history)) history = [];
+  } catch {
+    // No history yet — start fresh
+  }
+  history.push({ patchedAt: new Date().toISOString(), before: snapshot });
+  await writeFile(historyPath, JSON.stringify(history, null, 2), "utf8");
+}
+
+/**
+ * Returns the history entries for a pack, oldest first.
+ * Returns null if the pack id is invalid.
+ * Returns [] if there is no history yet.
+ */
+export async function listPackHistory(
+  id: string,
+  dataDir = defaultDataDir
+): Promise<HistoryEntry[] | null> {
+  if (!uuidPattern.test(id)) return null;
+  const historyPath = join(dataDir, `${id}.history.json`);
+  try {
+    const raw = await readFile(historyPath, "utf8");
+    const history = JSON.parse(raw) as HistoryEntry[];
+    return Array.isArray(history) ? history : [];
+  } catch {
+    return [];
+  }
+}
+
+// ── PR link ───────────────────────────────────────────────────
+
+/**
+ * Attaches a PR URL and optional changed-files list to a pack.
+ * Returns the updated pack or null if not found.
+ */
+export async function linkPrToIntentPack(
+  id: string,
+  prUrl: string,
+  changedFiles: string[] | undefined,
+  dataDir = defaultDataDir
+): Promise<StoredIntentPack | null> {
+  if (!uuidPattern.test(id)) return null;
+  const filePath = join(dataDir, `${id}.json`);
+  let stored: StoredIntentPack;
+  try {
+    const content = await readFile(filePath, "utf8");
+    stored = JSON.parse(content) as StoredIntentPack;
+  } catch {
+    return null;
+  }
+  stored.prLink = prUrl;
+  if (changedFiles !== undefined) {
+    stored.changedFiles = changedFiles;
+  }
+  await writeFile(filePath, JSON.stringify(stored, null, 2), "utf8");
+  return stored;
 }

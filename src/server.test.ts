@@ -613,3 +613,228 @@ test("PATCH /api/intent-packs/:id returns 400 for non-boolean archived", async (
     assert.equal((body as Record<string, string>)["error"], "archived must be a boolean");
   });
 });
+
+// ── Task packet route tests ───────────────────────────────────
+
+test("GET /api/intent-packs/:id/task-packet returns packet and prompt", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add dark mode" });
+    const stored = await saveIntentPack(pack, "Add dark mode", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/task-packet`
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(typeof b["prompt"] === "string" && (b["prompt"] as string).length > 0);
+    const packet = b["packet"] as Record<string, unknown>;
+    assert.equal(packet["schemaVersion"], "1");
+    assert.equal(packet["id"], stored.id);
+    assert.ok(typeof packet["goal"] === "string");
+  });
+});
+
+test("GET /api/intent-packs/:id/task-packet returns 404 for unknown id", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status } = await fetchJson(
+      `${baseUrl}/api/intent-packs/aaaaaaaa-0000-0000-0000-000000000099/task-packet`
+    );
+    assert.equal(status, 404);
+  });
+});
+
+// ── PR description route tests ────────────────────────────────
+
+test("GET /api/intent-packs/:id/pr-description returns markdown", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add subscription feature" });
+    const stored = await saveIntentPack(pack, "Add subscription feature", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/pr-description`
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(typeof b["markdown"] === "string" && (b["markdown"] as string).includes(stored.id));
+  });
+});
+
+test("GET /api/intent-packs/:id/pr-description returns 404 for unknown id", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status } = await fetchJson(
+      `${baseUrl}/api/intent-packs/aaaaaaaa-0000-0000-0000-000000000099/pr-description`
+    );
+    assert.equal(status, 404);
+  });
+});
+
+// ── History route tests ───────────────────────────────────────
+
+test("GET /api/intent-packs/:id/history returns empty array initially", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "New pack with no history" });
+    const stored = await saveIntentPack(pack, "New pack with no history", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/history`
+    );
+
+    assert.equal(status, 200);
+    assert.deepEqual(body, []);
+  });
+});
+
+test("GET /api/intent-packs/:id/history returns snapshot after a PATCH", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Pack to edit" });
+    const stored = await saveIntentPack(pack, "Pack to edit", undefined, dataDir);
+
+    // Patch the goal
+    await fetchJson(`${baseUrl}/api/intent-packs/${stored.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal: "Updated goal" }),
+    });
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/history`
+    );
+
+    assert.equal(status, 200);
+    const history = body as { patchedAt: string; before: unknown }[];
+    assert.equal(history.length, 1);
+    assert.ok(typeof history[0]!.patchedAt === "string");
+  });
+});
+
+// ── Link-PR route tests ───────────────────────────────────────
+
+test("POST /api/intent-packs/:id/link-pr stores prUrl on the pack", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Implement payments" });
+    const stored = await saveIntentPack(pack, "Implement payments", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/link-pr`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prUrl: "https://github.com/org/repo/pull/42",
+          changedFiles: ["src/billing.ts", "src/payment.ts"],
+        }),
+      }
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.equal(b["prLink"], "https://github.com/org/repo/pull/42");
+    assert.deepEqual(b["changedFiles"], ["src/billing.ts", "src/payment.ts"]);
+  });
+});
+
+test("POST /api/intent-packs/:id/link-pr returns 400 when prUrl is missing", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Link test" });
+    const stored = await saveIntentPack(pack, "Link test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/link-pr`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.ok(typeof (body as Record<string, unknown>)["error"] === "string");
+  });
+});
+
+test("POST /api/intent-packs/:id/link-pr returns 404 for unknown id", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status } = await fetchJson(
+      `${baseUrl}/api/intent-packs/aaaaaaaa-0000-0000-0000-000000000099/link-pr`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prUrl: "https://github.com/org/repo/pull/1" }),
+      }
+    );
+    assert.equal(status, 404);
+  });
+});
+
+// ── Drift report route tests ──────────────────────────────────
+
+test("GET /api/intent-packs/:id/drift-report returns report with no PR initially", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add feature" });
+    const stored = await saveIntentPack(pack, "Add feature", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/drift-report`
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.equal(b["packId"], stored.id);
+    assert.equal(b["hasLinkedPr"], false);
+    assert.ok(typeof b["summary"] === "string");
+  });
+});
+
+test("GET /api/intent-packs/:id/drift-report returns 404 for unknown id", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status } = await fetchJson(
+      `${baseUrl}/api/intent-packs/aaaaaaaa-0000-0000-0000-000000000099/drift-report`
+    );
+    assert.equal(status, 404);
+  });
+});
+
+// ── Status PATCH tests ────────────────────────────────────────
+
+test("PATCH /api/intent-packs/:id sets status to approved", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Status test" });
+    const stored = await saveIntentPack(pack, "Status test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      }
+    );
+
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["status"], "approved");
+  });
+});
+
+test("PATCH /api/intent-packs/:id returns 400 for invalid status value", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Bad status test" });
+    const stored = await saveIntentPack(pack, "Bad status test", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "pending" }),
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.ok(
+      typeof (body as Record<string, unknown>)["error"] === "string" &&
+      ((body as Record<string, unknown>)["error"] as string).includes("status must be one of")
+    );
+  });
+});

@@ -256,6 +256,78 @@
         border-color: rgba(74, 222, 128, 0.3) !important;
       }
 
+      /* ── Task packet / PR description buttons ── */
+      .btn-packet {
+        color: #c4b5fd;
+        border-color: rgba(167, 139, 250, 0.3) !important;
+      }
+      .btn-pr-desc {
+        color: #93c5fd;
+        border-color: rgba(96, 165, 250, 0.3) !important;
+      }
+
+      /* ── Status selector ── */
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 12px;
+        flex-wrap: wrap;
+      }
+      .status-label {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
+      }
+      .status-select {
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        padding: 4px 10px;
+        font-family: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      .status-select:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+      .badge-status-draft       { background: rgba(156, 163, 175, 0.15); color: #d1d5db; }
+      .badge-status-approved    { background: rgba(52, 211, 153, 0.15); color: #6ee7b7; }
+      .badge-status-in-progress { background: rgba(96, 165, 250, 0.15); color: #93c5fd; }
+      .badge-status-done        { background: rgba(52, 211, 153, 0.25); color: #34d399; }
+      .badge-status-blocked     { background: rgba(248, 113, 113, 0.15); color: #fca5a5; }
+      .badge-status-abandoned   { background: rgba(156, 163, 175, 0.08); color: #6b7280; }
+
+      /* ── Policy warnings ── */
+      .policy-warnings {
+        background: rgba(251, 191, 36, 0.08);
+        border: 1px solid rgba(251, 191, 36, 0.2);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin: 0 0 12px;
+      }
+      .policy-warnings-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #fbbf24;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 6px;
+      }
+      .policy-warnings ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .policy-warnings li {
+        font-size: 0.85rem;
+        color: #fcd34d;
+        line-height: 1.55;
+      }
+
       /* ── Notes section ── */
       .section-heading-row {
         display: flex;
@@ -473,6 +545,8 @@
           <div id="detailCard" class="card" style="margin-top:0; display:none">
             <div id="detailActions" class="detail-actions">
               <button id="exportBtn" disabled>Copy as GitHub Issue</button>
+              <button id="taskPacketBtn" class="btn-packet" disabled>Copy as Task Packet</button>
+              <button id="prDescBtn" class="btn-pr-desc" disabled>Copy as PR Description</button>
               <button id="rerunBtn" class="btn-rerun" disabled>Re-run from this pack</button>
               <button id="duplicateBtn" class="btn-duplicate" disabled>Duplicate pack</button>
               <button id="starBtn" class="btn-star" disabled>☆ Star</button>
@@ -480,6 +554,25 @@
               <button id="deleteBtn" class="btn-danger" disabled>Delete</button>
               <button id="cancelDeleteBtn" class="btn-cancel" style="display:none">Cancel</button>
               <span id="exportStatus" class="export-status"></span>
+            </div>
+
+            <!-- Status row -->
+            <div id="statusRow" class="status-row" style="display:none">
+              <span class="status-label">Status</span>
+              <select id="statusSelect" class="status-select">
+                <option value="draft">Draft</option>
+                <option value="approved">Approved</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Done</option>
+                <option value="blocked">Blocked</option>
+                <option value="abandoned">Abandoned</option>
+              </select>
+            </div>
+
+            <!-- Policy warnings -->
+            <div id="policyWarnings" class="policy-warnings" style="display:none">
+              <div class="policy-warnings-title">⚠ Policy Warnings</div>
+              <ul id="policyWarningsList"></ul>
             </div>
 
             <!-- Goal section (editable) -->
@@ -598,6 +691,12 @@
       const tagInput       = document.getElementById("tagInput");
       const addTagBtn      = document.getElementById("addTagBtn");
       const tagError       = document.getElementById("tagError");
+      const taskPacketBtn  = document.getElementById("taskPacketBtn");
+      const prDescBtn      = document.getElementById("prDescBtn");
+      const statusRow      = document.getElementById("statusRow");
+      const statusSelect   = document.getElementById("statusSelect");
+      const policyWarnings = document.getElementById("policyWarnings");
+      const policyWarningsList = document.getElementById("policyWarningsList");
 
       // Track the currently selected pack id, full object, and the full unfiltered list
       let selectedId   = null;
@@ -610,6 +709,25 @@
 
       // ── Helpers ───────────────────────────────────────────────
       const CONFIDENCE_VALUES = ["high", "medium", "low"];
+      const VALID_STATUSES = ["draft", "approved", "in-progress", "done", "blocked", "abandoned"];
+
+      function statusLabel(status) {
+        const labels = {
+          "draft": "Draft", "approved": "Approved", "in-progress": "In Progress",
+          "done": "Done", "blocked": "Blocked", "abandoned": "Abandoned"
+        };
+        return labels[status] || status;
+      }
+
+      function statusBadgeClass(status) {
+        const key = status ? status.replace(/[^a-z-]/g, "") : "draft";
+        return "badge badge-status-" + (VALID_STATUSES.includes(key) ? key : "draft");
+      }
+
+      function renderStatusBadge(pack) {
+        if (!pack.status || pack.status === "draft") return "";
+        return `<span class="${statusBadgeClass(pack.status)}">${escapeHtml(statusLabel(pack.status))}</span>`;
+      }
 
       function updateRerunBtn(pack) {
         rerunBtn.disabled = !pack.goal;
@@ -694,6 +812,7 @@
               <span>${escapeHtml(formatDate(pack.createdAt))}</span>
               <span class="${confidenceClass}">${escapeHtml(pack.confidence)}</span>
               <span class="badge">${escapeHtml(pack.reasoningMode)}</span>
+              ${renderStatusBadge(pack)}
               ${pack.notes ? `<span class="note-indicator">✎</span>` : ""}
               ${pack.starred ? `<span class="star-indicator">★</span>` : ""}
               ${pack.archived ? `<span class="archived-indicator">archived</span>` : ""}
@@ -768,6 +887,27 @@
         }
       }
 
+      function renderStatusRow(pack) {
+        statusRow.style.display = "";
+        const current = VALID_STATUSES.includes(pack.status) ? pack.status : "draft";
+        statusSelect.value = current;
+      }
+
+      function renderPolicyWarnings(pack) {
+        const warnings = Array.isArray(pack.policyWarnings) ? pack.policyWarnings : [];
+        if (warnings.length === 0) {
+          policyWarnings.style.display = "none";
+          return;
+        }
+        policyWarningsList.innerHTML = "";
+        for (const w of warnings) {
+          const li = document.createElement("li");
+          li.textContent = w;
+          policyWarningsList.appendChild(li);
+        }
+        policyWarnings.style.display = "";
+      }
+
       function selectPack(pack) {
         selectedId   = pack.id;
         selectedPack = pack;
@@ -783,6 +923,8 @@
         }
 
         exportBtn.disabled = false;
+        taskPacketBtn.disabled = false;
+        prDescBtn.disabled = false;
         updateRerunBtn(pack);
         duplicateBtn.disabled = false;
         starBtn.disabled = false;
@@ -824,6 +966,8 @@
           </div>
         `;
 
+        renderStatusRow(pack);
+        renderPolicyWarnings(pack);
         renderGoalSection(pack);
         renderContextSection(pack);
         renderNotesSection(pack);
@@ -858,6 +1002,10 @@
         notesEditor.style.display = "none";
         tagsSection.style.display = "none";
         tagError.style.display = "none";
+        statusRow.style.display = "none";
+        policyWarnings.style.display = "none";
+        taskPacketBtn.disabled = true;
+        prDescBtn.disabled = true;
       }
 
       // ── Prefill generator form from a saved pack ─────────────
@@ -995,6 +1143,104 @@
         } finally {
           exportBtn.disabled = false;
           exportBtn.textContent = "Copy as GitHub Issue";
+        }
+      });
+
+      // ── Export: Copy as Task Packet ───────────────────────────
+      taskPacketBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+
+        taskPacketBtn.disabled = true;
+        taskPacketBtn.textContent = "Copying…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/task-packet");
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Server error (" + res.status + ")");
+          }
+          const { prompt } = await res.json();
+
+          try {
+            await navigator.clipboard.writeText(prompt);
+            exportStatus.textContent = "✓ Task packet copied to clipboard";
+            exportStatus.className = "export-status success";
+          } catch (_) {
+            exportStatus.textContent = "Clipboard unavailable — prompt logged to console";
+            exportStatus.className = "export-status error";
+            console.log("Agent Task Packet:\n\n" + prompt);
+          }
+        } catch (err) {
+          exportStatus.textContent = "Export failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          taskPacketBtn.disabled = false;
+          taskPacketBtn.textContent = "Copy as Task Packet";
+        }
+      });
+
+      // ── Export: Copy as PR Description ────────────────────────
+      prDescBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+
+        prDescBtn.disabled = true;
+        prDescBtn.textContent = "Copying…";
+        exportStatus.textContent = "";
+        exportStatus.className = "export-status";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/pr-description");
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Server error (" + res.status + ")");
+          }
+          const { markdown } = await res.json();
+
+          try {
+            await navigator.clipboard.writeText(markdown);
+            exportStatus.textContent = "✓ PR description copied to clipboard";
+            exportStatus.className = "export-status success";
+          } catch (_) {
+            exportStatus.textContent = "Clipboard unavailable — PR description logged to console";
+            exportStatus.className = "export-status error";
+            console.log("PR Description:\n\n" + markdown);
+          }
+        } catch (err) {
+          exportStatus.textContent = "Export failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+        } finally {
+          prDescBtn.disabled = false;
+          prDescBtn.textContent = "Copy as PR Description";
+        }
+      });
+
+      // ── Status change ─────────────────────────────────────────
+      statusSelect.addEventListener("change", async () => {
+        if (!selectedId || !selectedPack) return;
+        const newStatus = statusSelect.value;
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: newStatus })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Status update failed");
+          }
+          const updated = await res.json();
+          selectedPack = updated;
+          const idx = allPacks.findIndex(p => p.id === updated.id);
+          if (idx !== -1) allPacks[idx] = updated;
+          renderPackList(getFilteredPacks());
+        } catch (err) {
+          exportStatus.textContent = "Status update failed: " + (err.message || "unknown error");
+          exportStatus.className = "export-status error";
+          // Revert dropdown
+          statusSelect.value = selectedPack.status || "draft";
         }
       });
 

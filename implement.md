@@ -1,137 +1,121 @@
 # implement.md
 
-## Current mission
-Keep Ghostrail moving through small, safe, verifiable slices.
+## Current milestone
+**Goal-shift + Foundation Milestone** — Intent Guardrail System
 
-## Current product state
-Ghostrail currently supports:
-- Intent Pack generation
-- local persistence
-- saved pack browsing
-- detail view
-- GitHub issue markdown export
-- original goal persistence
-- repositoryContext persistence
-- search/filter saved packs (matches goal, objective, touchedAreas, notes, tags, repositoryContext)
-- delete saved pack (inline two-step confirmation)
-- responsive layout
-- re-run from saved pack (prefill generator form from a selected pack)
-- inline delete confirmation (replaces window.confirm)
-- draft hint shows source pack's goal after re-run
-- **notes on saved packs (edit/save via PATCH)**
-- **tags on saved packs (add/remove via PATCH, normalized server-side)**
-- **sidebar shows compact tag chips and note indicator**
-- **duplicate pack (POST /api/intent-packs/:id/duplicate)**
-- **notes and tags surfaced in GitHub Issue markdown export**
-- **repositoryContext surfaced in GitHub Issue markdown export**
-- **goal editing on saved packs (inline editor, PATCH on save, rejects empty)**
-- **browser-flow tests for saved-pack action buttons (Playwright, B13-browser): re-run, delete confirmation, duplicate**
-- **starring saved packs (☆/★ toggle, sidebar indicator, PATCH starred)**
-- **archiving saved packs (archive/unarchive toggle, hidden by default, PATCH archived)**
-- **"Show archived" toggle in sidebar reveals archived packs**
+## What was attempted
+Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
+- Phase 0: Product shift and doctrine update
+- Phase 1: Agent Task Packet Generator
+- Phase 2: Pack status lifecycle
+- Phase 3: GitHub workflow bridge (PR description)
+- Phase 4: Intent version history foundation
+- Phase 5: Drift detection foundation
+- Phase 6: Repo policy / protected areas foundation
+- Phase 7: Backlog remaining intelligence features as concrete entries
 
-## Current verified baseline
-- POST /api/intent-pack works
-- GET /api/intent-packs works
-- GET /api/intent-packs/:id works
-- GET /api/intent-packs/:id/export-issue works (includes notes, tags, and repositoryContext when present)
-- POST /api/intent-pack/export-issue works
-- DELETE /api/intent-packs/:id works
-- PATCH /api/intent-packs/:id works (notes, tags, goal, repositoryContext, starred, archived; normalized/validated)
-- POST /api/intent-packs/:id/duplicate works
-- UI shows saved packs and detail view
-- UI supports search/filter (goal, objective, touchedAreas, notes, tags, repositoryContext)
-- UI supports inline delete confirmation (two-step, no window.confirm)
-- UI supports re-run/prefill from a saved pack
-- UI supports notes editing (inline editor, PATCH on save)
-- UI supports tags add/remove (chip list, PATCH on change)
-- UI sidebar shows compact tag badges and note indicator
-- UI supports duplicate pack (POST, refreshes + selects new)
-- UI supports goal editing (inline editor, PATCH on save, empty rejected client- and server-side)
-- UI saved-pack action flows covered by 5 Playwright browser-flow tests (re-run prefill, re-run + generate, delete cancel, delete confirm, duplicate)
-- re-run button updates correctly after goal is edited
-- draft hint shows the source pack's goal after re-run
-- GitHub Issue markdown export includes tags line when present
-- GitHub Issue markdown export includes notes section when present
-- GitHub Issue markdown export includes repositoryContext section when present
-- UI supports starring (☆ Star / ★ Unstar button; ★ indicator in sidebar; PATCH starred)
-- UI supports archiving (Archive / Unarchive button; archived packs hidden by default; "Show archived" toggle reveals them)
-- older packs without starred/archived load safely
-- build passes
-- all 79 unit/integration tests pass
-- all 12 browser tests pass
+## What was completed
 
-## Active stop-line
-Only take the next safe bounded slice.
-Do not do multiple backlog items in one run.
+### Phase 0 — Product shift and doctrine update ✅
+- `README.md` — rewritten to reflect Ghostrail as a full Intent Guardrail System
+- `docs/PROJECT_BRIEF.md` — rewritten with new product mission, current state, and ordered roadmap
+- `backlog.md` — rewritten with all 10 ideas as an ordered implementation roadmap, with dependencies, next steps, and blocked items
+- `implement.md` — updated (this file)
 
-## Selection rule
-Choose the highest-ROI task that is:
-- low risk
-- locally verifiable
-- coherent as one slice
-- useful immediately
+### Phase 1 — Agent Task Packet Generator ✅
+- New `src/core/taskPacket.ts` with:
+  - `toTaskPacketJson()` — machine-readable JSON task packet (schemaVersion, id, goal, objective, constraints, nonGoals, acceptanceCriteria, touchedAreas, risks, openQuestions, repositoryContext, createdAt)
+  - `toAgentPrompt()` — deterministic copy-ready agent prompt with checklist-format acceptance criteria
+- New route: `GET /api/intent-packs/:id/task-packet` → `{ packet, prompt }`
+- UI: "Copy as Task Packet" button in detail view action row
+- Tests: 13 unit tests in `src/taskPacket.test.ts`; 2 integration tests in `src/server.test.ts`
 
-## Constraints
-- no framework migration
-- no database unless explicitly planned
-- no broad refactor
-- no unrelated cleanup
-- preserve backward compatibility for older stored packs
+### Phase 2 — Pack status lifecycle ✅
+- New `PackStatus` type and `VALID_STATUSES` constant in `src/core/types.ts`
+  - Values: `"draft" | "approved" | "in-progress" | "done" | "blocked" | "abandoned"`
+  - `status?` on `StoredIntentPack` (optional for backward compat)
+- `PATCH /api/intent-packs/:id` validates status against `VALID_STATUSES`
+- `patchIntentPack` handles `status` field
+- UI: Status dropdown in detail view; status badge in sidebar (non-draft statuses shown)
+- Tests: 3 store tests; 2 integration tests
 
-## Implementation log
+### Phase 3 — GitHub workflow bridge (PR description) ✅
+- New `src/core/prDescription.ts` with `toPrDescription()` — structured markdown PR description template
+  - Includes: goal as title, objective, repositoryContext, acceptance criteria checklist, touched areas, constraints, non-goals, risks, open questions, notes, pack ID footer
+- New route: `GET /api/intent-packs/:id/pr-description` → `{ markdown }`
+- UI: "Copy as PR Description" button in detail view action row
+- Tests: 13 unit tests in `src/prDescription.test.ts`; 2 integration tests in `src/server.test.ts`
+- Note: Live GitHub API integration (issue creation) is blocked on credentials — backlogged as B-GH-LIVE
 
-### Last completed slice
-- Slice: B13 — Pack starring and archiving
-- Why this was the right next move: pack list was growing and needed lightweight curation; starring lets users mark important packs; archiving hides stale packs without deleting them; reused existing PATCH, sidebar, and filter patterns exactly; single coherent subsystem slice; all verification passed in one run
-- Files changed:
-  - `src/core/types.ts` — added `starred?: boolean` and `archived?: boolean` to `StoredIntentPack`
-  - `src/core/intentPackStore.ts` — widened `patchIntentPack` patch type; starred/archived stored as `true` or deleted (field absent when false) for clean JSON
-  - `src/core/handler.ts` — PATCH route validates starred/archived as booleans (400 on non-boolean)
-  - `public/index.html` — CSS for `.btn-star`, `.btn-archive`, `.star-indicator`, `.archived-indicator`, `.pack-item-archived`, `.show-archived-row`; "Show archived" checkbox in sidebar; `#starBtn` / `#archiveBtn` in detail actions; `showArchived` state; `updateCurationBtns()` helper; `getFilteredPacks()` filters archived by default; `renderPackList()` shows ★ and "archived" badge; `selectPack()` / `clearDetail()` updated; event listeners for star, archive, show-archived; `renderPackList([])` now clears innerHTML for correct DOM count
-  - `src/intentPackStore.test.ts` — 6 new unit tests: starred true/false, archived true/false, older packs without fields, isolation from other fields
-  - `src/server.test.ts` — 4 new integration tests: PATCH starred true, PATCH archived true, 400 non-boolean starred, 400 non-boolean archived
-  - `tests/browser/curation.spec.ts` (new) — 3 browser tests: star toggle updates button + shows ★ indicator; archive hides pack from default list; show-archived toggle reveals archived pack + shows "archived" badge
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (79/79 unit+integration tests; +10 from B13-browser baseline of 69)
-  - `npx playwright test` passes (12/12 browser tests; +3 curation tests; ~5s)
-- Result: working
-- Rollback path: revert 7 files, remove `tests/browser/curation.spec.ts`
+### Phase 4 — Intent version history foundation ✅
+- New `HistoryEntry` type and `appendHistorySnapshot()` (internal) in `src/core/intentPackStore.ts`
+- History stored in `{id}.history.json` alongside the pack file
+- Snapshots taken on every "meaningful" patch: goal, repositoryContext, notes, tags, status changes
+- Curation-only patches (starred, archived) do NOT create history entries
+- New `listPackHistory()` exported function
+- New route: `GET /api/intent-packs/:id/history` → array of `{ patchedAt, before }` entries
+- Tests: 6 store tests; 1 integration test in `src/server.test.ts`
+- Visual diff UI is backlogged as B-HISTORY-UI
 
-### Previous completed slice (B13-browser)
-- Slice: B13-browser — Browser-flow tests for saved-pack action buttons (re-run, delete confirmation, duplicate)
-- Why this was the right next move: Playwright infrastructure was already in place from B12; three high-value UI action flows (re-run, inline delete, duplicate) were still manually verified only; adding tests in an existing spec directory required no new dependencies or configuration; single coherent test-only slice with clear verification
-- Files changed:
-  - `tests/browser/actions.spec.ts` (new) — 5 browser-flow tests: re-run prefills form + shows draftHint; re-run then generate creates a new pack; delete first click shows confirm state and cancel resets it; delete confirm removes pack and shows empty state; duplicate creates new pack with new ID while original remains
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (69/69 tests; unchanged)
-  - `npm run test:browser` passes (9/9 browser-flow tests; ~4.3s)
-- Result: working
-- Rollback path: remove `tests/browser/actions.spec.ts`
+### Phase 5 — Drift detection foundation ✅
+- New fields on `StoredIntentPack`: `prLink?` and `changedFiles?`
+- New `src/core/driftReport.ts` with `computeDriftReport()`:
+  - Accepts pack with linked PR metadata
+  - Returns `{ packId, prLink, hasLinkedPr, scopeCreep[], intentGap[], summary }`
+  - `scopeCreep`: changed files that don't match any touchedArea (token-based matching)
+  - `intentGap`: touchedAreas with no matching changed file
+  - Conservative: clearly labelled as "possible" to avoid false confidence
+- New route: `POST /api/intent-packs/:id/link-pr` body `{ prUrl, changedFiles? }` → updated pack
+- New route: `GET /api/intent-packs/:id/drift-report` → drift report
+- Tests: 8 unit tests in `src/driftReport.test.ts`; 4 integration tests in `src/server.test.ts`; 4 store tests
+- Full diff-text parsing engine is backlogged as B15
 
-### Previous completed slice (B12)
-- Slice: B12 — Browser-flow tests for inline editors (goal, repositoryContext, notes, tags)
-- Why this was the right next move: all four inline editing flows were working but only manually verified; adding Playwright tests closes the automated coverage gap; Playwright + system Chrome required no new browser download; single coherent test slice with clear verification
-- Files changed:
-  - `package.json` — added `"@playwright/test": "^1.58.2"` devDependency; added `"test:browser": "playwright test"` script
-  - `playwright.config.ts` (new) — minimal Playwright config; headless; uses system Chrome (`/usr/bin/chromium`); `--no-sandbox` for CI environments; `testDir: "tests/browser"`
-  - `tests/browser/editing.spec.ts` (new) — 4 browser-flow tests: edit goal, edit repositoryContext, edit notes, add/remove tag; each test starts a real server with a temp data dir, seeds one pack, drives the UI via Playwright, asserts the updated display value
-- Verification:
-  - `npm run build` passes (TypeScript, zero errors)
-  - `npm test` passes (69/69 tests; unchanged)
-  - `npm run test:browser` passes (4/4 browser-flow tests; ~7.6s)
-- Result: working
-- Rollback path: remove `playwright.config.ts`, `tests/browser/editing.spec.ts`, revert `package.json` to remove devDependency and script
+### Phase 6 — Repo policy / protected areas foundation ✅
+- New `src/core/policy.ts` with:
+  - `GhostrailPolicy` interface: `{ protectedAreas?, rules? }`
+  - `PolicyRule` interface: `{ ifTouchedAreaIncludes, warn }`
+  - `loadPolicy(policyPath?)` — loads and validates ghostrail-policy.json
+  - `getPolicy()` — cached loader (reset with `resetPolicyCache()` for tests)
+  - `applyPolicy(touchedAreas, policy)` — pure function, returns warning strings
+- `createHandler` extended with optional `policyPath` parameter
+- Pack generation applies policy if file exists — `policyWarnings` stored on pack
+- New `policyWarnings?` field on `StoredIntentPack`
+- UI: Policy warnings section in detail view (amber-styled, only shown when warnings exist)
+- Tests: 10 unit tests in `src/policy.test.ts`
+- Default policy path: `<project-root>/ghostrail-policy.json` (no file = no warnings)
+- Policy warning UI acknowledgement gate (before "Approved") is backlogged as B-POLICY-2
 
-### Current recommended next slice
-- B14 — Export or sharing improvements, or a "view all" / paginated pack list once the list grows long
-- Why now: B13 is complete; the next highest-ROI step is either better export UX (copy-friendly formats) or list management as packs accumulate
-- Stop-line: do not begin a new slice in this session
+### Phase 7 — Backlog intelligence features ✅
+- Ideas #3 (LLM clarifying questions), #5 (goal quality score), #8 (pack health score) are concretely documented in `backlog.md` with purpose, dependencies, recommended approach, and next steps
 
-## If blocked
-If blocked, stop and write:
-- what blocked progress
-- whether the block is technical or product ambiguity
-- the smallest next human decision needed
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `npm test` → 151/151 unit + integration tests pass (was 69 before this milestone)
+- `npx playwright test` → 12/12 browser tests pass (all existing flows intact)
+- All existing pack behaviors preserved (backward compat: all new fields are optional)
+
+## Where work stopped
+Clean boundary. All 7 phases completed.
+
+## Next recommended slice
+
+### Priority 1 — B15: Full drift engine
+- Accept actual git diff text via `link-pr`, parse changed file paths, enable richer comparison
+- Add a diff parser to `src/core/driftReport.ts`
+- Still no UI changes needed in v1
+
+### Priority 2 — B-POLICY-2: Policy warning UI acknowledgement
+- Show ⚠️ badge in sidebar for packs with policy warnings
+- Gate status transition to "Approved" when unacknowledged policy warnings exist
+
+### Priority 3 — B-QUALITY: Live goal quality score
+- Pure client-side heuristic scorer runs as user types in the generator form
+- No server changes needed
+
+### Priority 4 — B-HEALTH: Pack health score
+- `src/core/healthScore.ts` — pure function scoring a pack across dimensions
+- Surface in detail view as a collapsible section
+
+### Priority 5 — B-HISTORY-UI: Version history tab
+- UI tab in detail view showing a timeline of history snapshots
+- Field-by-field diff (text comparison)

@@ -15,6 +15,17 @@ export interface IntentPack {
   reasoningMode: "heuristic" | "llm";
 }
 
+export type PackStatus = "draft" | "approved" | "in-progress" | "done" | "blocked" | "abandoned";
+
+export const VALID_STATUSES: PackStatus[] = [
+  "draft",
+  "approved",
+  "in-progress",
+  "done",
+  "blocked",
+  "abandoned",
+];
+
 export interface StoredIntentPack extends IntentPack {
   id: string;
   createdAt: string;
@@ -24,4 +35,8 @@ export interface StoredIntentPack extends IntentPack {
   tags?: string[];
   starred?: boolean;
   archived?: boolean;
+  status?: PackStatus;
+  prLink?: string;
+  changedFiles?: string[];
+  policyWarnings?: string[];
 }
