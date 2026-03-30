@@ -328,6 +328,93 @@
         line-height: 1.55;
       }
 
+      /* ── Drift analysis section ── */
+      .drift-section {
+        margin: 20px 0 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 16px;
+      }
+      .drift-section h3 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+        margin: 0 0 10px;
+      }
+      .drift-textarea {
+        min-height: 90px;
+        font-family: "Menlo", "Consolas", "Monaco", monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        resize: vertical;
+      }
+      .btn-drift {
+        color: #7dd3fc;
+        border-color: rgba(125, 211, 252, 0.3) !important;
+      }
+      .drift-result {
+        margin-top: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px 14px;
+        font-size: 0.85rem;
+        line-height: 1.6;
+      }
+      .drift-result.drift-clean {
+        background: rgba(52, 211, 153, 0.06);
+        border-color: rgba(52, 211, 153, 0.2);
+      }
+      .drift-result.drift-warning {
+        background: rgba(251, 191, 36, 0.06);
+        border-color: rgba(251, 191, 36, 0.2);
+      }
+      .drift-result.drift-detected {
+        background: rgba(248, 113, 113, 0.06);
+        border-color: rgba(248, 113, 113, 0.2);
+      }
+      .drift-result.drift-no-data {
+        background: rgba(156, 163, 175, 0.06);
+        border-color: rgba(156, 163, 175, 0.15);
+      }
+      .drift-status-badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 2px 8px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .drift-status-clean    { background: rgba(52, 211, 153, 0.15); color: #6ee7b7; }
+      .drift-status-warning  { background: rgba(251, 191, 36, 0.15); color: #fcd34d; }
+      .drift-status-detected { background: rgba(248, 113, 113, 0.15); color: #fca5a5; }
+      .drift-status-no-data  { background: rgba(156, 163, 175, 0.12); color: #9ca3af; }
+      .drift-bucket {
+        margin: 8px 0 0;
+      }
+      .drift-bucket-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0 0 3px;
+      }
+      .drift-bucket-clean    { color: #6ee7b7; }
+      .drift-bucket-warning  { color: #fcd34d; }
+      .drift-bucket-danger   { color: #fca5a5; }
+      .drift-bucket-muted    { color: #6b7280; }
+      .drift-bucket ul {
+        margin: 2px 0 0;
+        padding-left: 18px;
+      }
+      .drift-bucket li {
+        font-family: "Menlo", "Consolas", "Monaco", monospace;
+        font-size: 0.8rem;
+        color: #d1d5db;
+        line-height: 1.5;
+      }
+
       /* ── Notes section ── */
       .section-heading-row {
         display: flex;
@@ -637,6 +724,17 @@
               </div>
               <p id="tagError" class="state-msg error" style="display:none"></p>
             </div>
+
+            <!-- Drift analysis section -->
+            <div id="driftSection" class="drift-section" style="display:none">
+              <h3>Drift Analysis</h3>
+              <textarea id="driftInput" class="notes-textarea drift-textarea"
+                placeholder="Paste git diff output here (e.g. from `git diff main...HEAD`)…"></textarea>
+              <div class="notes-editor-actions">
+                <button id="analyzeDriftBtn" class="btn-drift">Analyze Drift</button>
+              </div>
+              <div id="driftResult" style="display:none"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -697,6 +795,10 @@
       const statusSelect   = document.getElementById("statusSelect");
       const policyWarnings = document.getElementById("policyWarnings");
       const policyWarningsList = document.getElementById("policyWarningsList");
+      const driftSection   = document.getElementById("driftSection");
+      const driftInput     = document.getElementById("driftInput");
+      const analyzeDriftBtn = document.getElementById("analyzeDriftBtn");
+      const driftResult    = document.getElementById("driftResult");
 
       // Track the currently selected pack id, full object, and the full unfiltered list
       let selectedId   = null;
@@ -972,6 +1074,11 @@
         renderContextSection(pack);
         renderNotesSection(pack);
         renderTagsSection(pack);
+        // Show drift section — reset input/result on each pack switch
+        driftSection.style.display = "";
+        driftInput.value = "";
+        driftResult.style.display = "none";
+        driftResult.innerHTML = "";
       }
 
       function clearDetail() {
@@ -1006,6 +1113,10 @@
         policyWarnings.style.display = "none";
         taskPacketBtn.disabled = true;
         prDescBtn.disabled = true;
+        driftSection.style.display = "none";
+        driftInput.value = "";
+        driftResult.style.display = "none";
+        driftResult.innerHTML = "";
       }
 
       // ── Prefill generator form from a saved pack ─────────────
@@ -1241,6 +1352,86 @@
           exportStatus.className = "export-status error";
           // Revert dropdown
           statusSelect.value = selectedPack.status || "draft";
+        }
+      });
+
+      // ── Drift analysis ────────────────────────────────────────
+      analyzeDriftBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+        const diffText = driftInput.value;
+        if (!diffText.trim()) {
+          driftResult.innerHTML = `<div class="drift-result drift-no-data"><span class="drift-status-badge drift-status-no-data">No diff</span><br>Paste a git diff to analyze drift.</div>`;
+          driftResult.style.display = "";
+          return;
+        }
+
+        analyzeDriftBtn.disabled = true;
+        analyzeDriftBtn.textContent = "Analyzing…";
+
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/analyze-diff", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ diffText })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Server error (" + res.status + ")");
+          }
+          const { report, changedFiles } = await res.json();
+
+          const status = report.status || "no-data";
+          const statusLabels = {
+            "clean": "✓ Clean",
+            "warning": "⚠ Warning",
+            "drift-detected": "✗ Drift Detected",
+            "no-data": "No data"
+          };
+          const statusClass = {
+            "clean": "drift-clean",
+            "warning": "drift-warning",
+            "drift-detected": "drift-detected",
+            "no-data": "drift-no-data"
+          };
+          const badgeClass = {
+            "clean": "drift-status-clean",
+            "warning": "drift-status-warning",
+            "drift-detected": "drift-status-detected",
+            "no-data": "drift-status-no-data"
+          };
+
+          function driftBucket(label, items, cls) {
+            if (!items || items.length === 0) return "";
+            const lis = items.map(f => `<li>${escapeHtml(f)}</li>`).join("");
+            return `<div class="drift-bucket"><div class="drift-bucket-label ${escapeHtml(cls)}">${escapeHtml(label)} (${items.length})</div><ul>${lis}</ul></div>`;
+          }
+
+          const matched   = driftBucket("Matched", report.matchedFiles, "drift-bucket-clean");
+          const unexpected = driftBucket("Unexpected (scope creep)", report.scopeCreep, "drift-bucket-danger");
+          const missing   = driftBucket("Missing (intent gap)", report.intentGap, "drift-bucket-warning");
+
+          driftResult.innerHTML = `
+            <div class="drift-result ${escapeHtml(statusClass[status] || "drift-no-data")}">
+              <span class="drift-status-badge ${escapeHtml(badgeClass[status] || "drift-status-no-data")}">${escapeHtml(statusLabels[status] || status)}</span>
+              <div style="font-size:0.85rem;margin-bottom:8px;color:#d1d5db">${escapeHtml(report.summary || "")}</div>
+              <div style="font-size:0.75rem;color:#9ca3af;margin-bottom:8px">${changedFiles.length} file(s) extracted from diff</div>
+              ${matched}${unexpected}${missing}
+            </div>
+          `;
+          driftResult.style.display = "";
+
+          // Update the pack in local state (changedFiles may have changed)
+          if (selectedPack && selectedPack.id === selectedId) {
+            selectedPack = { ...selectedPack, changedFiles };
+            const idx = allPacks.findIndex(p => p.id === selectedId);
+            if (idx !== -1) allPacks[idx] = selectedPack;
+          }
+        } catch (err) {
+          driftResult.innerHTML = `<div class="drift-result drift-no-data" style="color:#fca5a5">Analysis failed: ${escapeHtml(err.message || "unknown error")}</div>`;
+          driftResult.style.display = "";
+        } finally {
+          analyzeDriftBtn.disabled = false;
+          analyzeDriftBtn.textContent = "Analyze Drift";
         }
       });
 

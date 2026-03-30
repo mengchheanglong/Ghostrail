@@ -838,3 +838,149 @@ test("PATCH /api/intent-packs/:id returns 400 for invalid status value", async (
     );
   });
 });
+
+// ── analyze-diff route tests ──────────────────────────────────
+
+const SAMPLE_DIFF = `diff --git a/src/billing/invoice.ts b/src/billing/invoice.ts
+index abc..def 100644
+--- a/src/billing/invoice.ts
++++ b/src/billing/invoice.ts
+@@ -1 +1,2 @@
+ export class Invoice {}
++export class Invoice2 {}
+diff --git a/src/dashboard/analytics.ts b/src/dashboard/analytics.ts
+new file mode 100644
+--- /dev/null
++++ b/src/dashboard/analytics.ts
+@@ -0,0 +1 @@
++export function track() {}
+`;
+
+test("POST /api/intent-packs/:id/analyze-diff parses diff and returns report", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add billing feature" });
+    const stored = await saveIntentPack(pack, "Add billing feature", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/analyze-diff`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ diffText: SAMPLE_DIFF }),
+      }
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(Array.isArray(b["changedFiles"]), "changedFiles should be an array");
+    const changedFiles = b["changedFiles"] as string[];
+    assert.ok(changedFiles.includes("src/billing/invoice.ts"), "should include billing file");
+    assert.ok(changedFiles.includes("src/dashboard/analytics.ts"), "should include dashboard file");
+
+    const report = b["report"] as Record<string, unknown>;
+    assert.equal(report["packId"], stored.id);
+    assert.ok(typeof report["status"] === "string");
+    assert.ok(Array.isArray(report["matchedFiles"]));
+    assert.ok(Array.isArray(report["scopeCreep"]));
+    assert.ok(Array.isArray(report["intentGap"]));
+  });
+});
+
+test("POST /api/intent-packs/:id/analyze-diff stores changedFiles so drift-report is populated", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add billing feature" });
+    const stored = await saveIntentPack(pack, "Add billing feature", undefined, dataDir);
+
+    await fetchJson(`${baseUrl}/api/intent-packs/${stored.id}/analyze-diff`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ diffText: SAMPLE_DIFF }),
+    });
+
+    // After analyze-diff, GET drift-report should show data
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/drift-report`
+    );
+    assert.equal(status, 200);
+    const report = body as Record<string, unknown>;
+    assert.ok(Array.isArray(report["changedFiles"]));
+    assert.ok((report["changedFiles"] as string[]).length > 0, "changedFiles should be non-empty");
+    assert.ok(report["status"] !== "no-data", "status should not be no-data after analysis");
+  });
+});
+
+test("POST /api/intent-packs/:id/analyze-diff accepts optional prUrl", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Link PR with diff" });
+    const stored = await saveIntentPack(pack, "Link PR with diff", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/analyze-diff`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          diffText: SAMPLE_DIFF,
+          prUrl: "https://github.com/org/repo/pull/5",
+        }),
+      }
+    );
+
+    assert.equal(status, 200);
+    const report = (body as Record<string, unknown>)["report"] as Record<string, unknown>;
+    assert.equal(report["prLink"], "https://github.com/org/repo/pull/5");
+    assert.equal(report["hasLinkedPr"], true);
+  });
+});
+
+test("POST /api/intent-packs/:id/analyze-diff returns 400 when diffText is missing", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Missing diff" });
+    const stored = await saveIntentPack(pack, "Missing diff", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/analyze-diff`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.ok(typeof (body as Record<string, unknown>)["error"] === "string");
+  });
+});
+
+test("POST /api/intent-packs/:id/analyze-diff returns 404 for unknown id", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status } = await fetchJson(
+      `${baseUrl}/api/intent-packs/aaaaaaaa-0000-0000-0000-000000000099/analyze-diff`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ diffText: SAMPLE_DIFF }),
+      }
+    );
+    assert.equal(status, 404);
+  });
+});
+
+test("POST /api/intent-packs/:id/analyze-diff handles empty diff gracefully", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Empty diff" });
+    const stored = await saveIntentPack(pack, "Empty diff", undefined, dataDir);
+
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/analyze-diff`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ diffText: "   " }),
+      }
+    );
+
+    // Empty diff text is a valid (though uninteresting) request — 400 because it's whitespace-only
+    assert.equal(status, 400);
+  });
+});

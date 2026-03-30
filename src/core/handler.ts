@@ -5,6 +5,7 @@ import { toGitHubIssueMarkdown } from "./issueMarkdown.js";
 import { toTaskPacketJson, toAgentPrompt } from "./taskPacket.js";
 import { toPrDescription } from "./prDescription.js";
 import { computeDriftReport } from "./driftReport.js";
+import { parseGitDiff } from "./diffParser.js";
 import { loadPolicy, applyPolicy } from "./policy.js";
 import {
   saveIntentPack,
@@ -209,6 +210,31 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
           if (!linked) return json(res, 404, { error: "not found" });
           return json(res, 200, linked);
         }
+
+        if (rest.endsWith("/analyze-diff")) {
+          const id = rest.slice(0, -"/analyze-diff".length);
+          const body = await readJson<{ diffText?: unknown; prUrl?: unknown }>(req);
+          if (!body.diffText || typeof body.diffText !== "string" || !body.diffText.trim()) {
+            return json(res, 400, { error: "diffText is required and must be a non-empty string" });
+          }
+          const changedFiles = parseGitDiff(body.diffText);
+          const prUrl = typeof body.prUrl === "string" && body.prUrl.trim()
+            ? body.prUrl.trim()
+            : undefined;
+          const pack = await getIntentPackById(id, dataDir);
+          if (!pack) return json(res, 404, { error: "not found" });
+          // Store the parsed files (and optionally the PR link) on the pack
+          const updated = await linkPrToIntentPack(
+            id,
+            prUrl ?? pack.prLink ?? "diff-analyzed",
+            changedFiles,
+            dataDir
+          );
+          if (!updated) return json(res, 404, { error: "not found" });
+          const report = computeDriftReport(updated);
+          return json(res, 200, { report, changedFiles });
+        }
+
         return json(res, 404, { error: "not found" });
       }
 
