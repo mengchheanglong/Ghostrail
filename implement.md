@@ -119,23 +119,37 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
 - `npx playwright test` → 16/16 browser tests pass (was 12 before B15)
 - All existing pack behaviors preserved (backward compat: all new fields are optional)
 
+## What was completed (continued)
+
+### B-POLICY-2 — Policy warning UI acknowledgement ✅
+- `public/index.html` changes:
+  - CSS: `.policy-warning-indicator` (amber `⚠`) and `.btn-acknowledge` (small amber button)
+  - HTML: "Acknowledge Warnings" button (`#acknowledgeWarningsBtn`) added inside `#policyWarnings` section
+  - JS: `const acknowledgedPackIds = new Set()` — tracks per-session acknowledged packs
+  - Sidebar `renderPackList`: shows `<span class="policy-warning-indicator" title="Unacknowledged policy warnings">⚠</span>` when pack has `policyWarnings` and is not yet acknowledged
+  - `renderPolicyWarnings()`: shows/hides the "Acknowledge Warnings" button based on acknowledgement state
+  - Status change gate: selecting "Approved" with unacknowledged `policyWarnings` reverts the dropdown and shows an inline error "⚠ Acknowledge policy warnings before approving."
+  - Acknowledge button listener: adds pack id to `acknowledgedPackIds`, hides the button, re-renders sidebar (⚠ badge disappears)
+- New `tests/browser/policy.spec.ts` — 3 browser tests:
+  - `⚠ indicator appears in sidebar for a pack with unacknowledged policy warnings`
+  - `selecting Approved with unacknowledged warnings reverts the dropdown and shows an error`
+  - `after acknowledging warnings the ⚠ badge disappears and Approved status is allowed`
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `npm test` → 183/183 unit + integration tests pass (unchanged)
+- `npx playwright test` → 19/19 browser tests pass (was 16 before B-POLICY-2)
+- All existing pack behaviors preserved
+
 ## Where work stopped
-Clean boundary. B15 (full drift engine) is complete.
+Clean boundary. B-POLICY-2 is complete.
 
 ## Next recommended slice
 
-### Priority 1 — B-POLICY-2: Policy warning UI acknowledgement
-- Show ⚠️ badge in sidebar for packs with policy warnings
-- Gate status transition to "Approved" when unacknowledged policy warnings exist
-
-### Priority 2 — B-QUALITY: Live goal quality score
+### Priority 1 — B-QUALITY: Live goal quality score
 - Pure client-side heuristic scorer runs as user types in the generator form
 - No server changes needed
+- Show a color-coded bar: 🔴 Vague → 🟡 Partial → 🟢 Clear
+- Add unit tests for scoring logic and a browser test for display
 
-### Priority 4 — B-HEALTH: Pack health score
-- `src/core/healthScore.ts` — pure function scoring a pack across dimensions
-- Surface in detail view as a collapsible section
-
-### Priority 5 — B-HISTORY-UI: Version history tab
-- UI tab in detail view showing a timeline of history snapshots
-- Field-by-field diff (text comparison)
+### Priority 2 — B-HEALTH: Pack health score

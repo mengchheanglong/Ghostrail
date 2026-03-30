@@ -574,6 +574,15 @@
       .pack-item-archived {
         opacity: 0.45;
       }
+      .policy-warning-indicator {
+        font-size: 0.78rem;
+        color: #fbbf24;
+      }
+      .btn-acknowledge {
+        font-size: 0.78rem;
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.3) !important;
+      }
       .show-archived-row {
         display: flex;
         align-items: center;
@@ -660,6 +669,9 @@
             <div id="policyWarnings" class="policy-warnings" style="display:none">
               <div class="policy-warnings-title">⚠ Policy Warnings</div>
               <ul id="policyWarningsList"></ul>
+              <div id="policyWarningsAckRow" style="display:none;margin-top:8px">
+                <button id="acknowledgeWarningsBtn" class="btn-acknowledge">Acknowledge Warnings</button>
+              </div>
             </div>
 
             <!-- Goal section (editable) -->
@@ -795,6 +807,8 @@
       const statusSelect   = document.getElementById("statusSelect");
       const policyWarnings = document.getElementById("policyWarnings");
       const policyWarningsList = document.getElementById("policyWarningsList");
+      const policyWarningsAckRow = document.getElementById("policyWarningsAckRow");
+      const acknowledgeWarningsBtn = document.getElementById("acknowledgeWarningsBtn");
       const driftSection   = document.getElementById("driftSection");
       const driftInput     = document.getElementById("driftInput");
       const analyzeDriftBtn = document.getElementById("analyzeDriftBtn");
@@ -806,6 +820,7 @@
       let allPacks     = [];
       let pendingDelete = false;
       let showArchived  = false;
+      const acknowledgedPackIds = new Set(); // packs where policy warnings have been acknowledged this session
 
       const GOAL_PREVIEW_MAX_LEN = 60;
 
@@ -918,6 +933,7 @@
               ${pack.notes ? `<span class="note-indicator">✎</span>` : ""}
               ${pack.starred ? `<span class="star-indicator">★</span>` : ""}
               ${pack.archived ? `<span class="archived-indicator">archived</span>` : ""}
+              ${Array.isArray(pack.policyWarnings) && pack.policyWarnings.length > 0 && !acknowledgedPackIds.has(pack.id) ? `<span class="policy-warning-indicator" title="Unacknowledged policy warnings">⚠</span>` : ""}
             </div>
             ${Array.isArray(pack.tags) && pack.tags.length > 0
               ? `<div class="pack-item-tags">${pack.tags.map(t => `<span class="badge badge-tag">${escapeHtml(t)}</span>`).join("")}</div>`
@@ -1008,6 +1024,7 @@
           policyWarningsList.appendChild(li);
         }
         policyWarnings.style.display = "";
+        policyWarningsAckRow.style.display = acknowledgedPackIds.has(pack.id) ? "none" : "";
       }
 
       function selectPack(pack) {
@@ -1332,6 +1349,19 @@
         if (!selectedId || !selectedPack) return;
         const newStatus = statusSelect.value;
 
+        // Gate: policy warnings must be acknowledged before approving
+        if (
+          newStatus === "approved" &&
+          Array.isArray(selectedPack.policyWarnings) &&
+          selectedPack.policyWarnings.length > 0 &&
+          !acknowledgedPackIds.has(selectedId)
+        ) {
+          exportStatus.textContent = "⚠ Acknowledge policy warnings before approving.";
+          exportStatus.className = "export-status error";
+          statusSelect.value = selectedPack.status || "draft";
+          return;
+        }
+
         try {
           const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId), {
             method: "PATCH",
@@ -1353,6 +1383,14 @@
           // Revert dropdown
           statusSelect.value = selectedPack.status || "draft";
         }
+      });
+
+      // ── Policy warning acknowledgement ────────────────────────
+      acknowledgeWarningsBtn.addEventListener("click", () => {
+        if (!selectedId) return;
+        acknowledgedPackIds.add(selectedId);
+        policyWarningsAckRow.style.display = "none";
+        renderPackList(getFilteredPacks());
       });
 
       // ── Drift analysis ────────────────────────────────────────

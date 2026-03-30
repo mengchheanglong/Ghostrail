@@ -134,6 +134,7 @@ Candidates for the next bounded slice.
 - Scope: detail view only; no new storage
 - Risk: low
 - Verification: browser test for policy warning display
+- **Status**: ✅ Done (see B-POLICY-2 in Done section)
 
 ### B-QUALITY — Live goal quality score
 - Value: Real-time feedback as user types; trains better goal writing
@@ -168,6 +169,9 @@ Move an item here if it needs user/product input.
 - Next step once unblocked: accept PAT in local config, wire up issue creation
 
 ## Done
+
+### B-POLICY-2 — Policy warning UI acknowledgement
+- Completed: `⚠` badge in sidebar; "Acknowledge Warnings" button in detail view; gate on "Approved" status; 3 browser tests. 183/183 unit tests + 19/19 browser tests pass.
 
 ### B15 — Full drift engine
 - Completed: `src/core/diffParser.ts` with `parseGitDiff()`; `POST /api/intent-packs/:id/analyze-diff`; drift UI (paste textarea + result buckets); 15 unit tests, 7 integration tests, 4 browser tests. 183/183 unit tests + 16/16 browser tests pass.
