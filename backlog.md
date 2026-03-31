@@ -37,18 +37,16 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - "Copy as Task Packet" button in detail view
 
 ### Idea 3 — LLM Integration with Pre-Generation Clarifying Questions (Intelligence)
-**Status**: Provider abstraction layer shipped (B-LLM-1). Real model integration blocked on credentials.
-**Why it matters**: The existing heuristic generator produces generic outputs. A real LLM call produces sharper packs. Pre-generation clarifying questions prevent bad input from producing bad packs.
-**Shipped (B-LLM-1)**:
-- `src/core/llmProvider.ts` — `LlmProvider` interface, `HeuristicProvider`, `StubLlmProvider`, `createProvider()` factory
-- `createHandler()` accepts an optional `provider?: LlmProvider` param — integration boundary is testable without credentials
-- 16 unit tests; 4 integration tests (stub injection, pack persistence, export-issue, default heuristic fallback)
-**Recommended approach**:
-1. Add a real OpenAI/Anthropic implementation to the `LlmProviderConfig` union and wire it in `createProvider()`
-2. Before generating, call the model to surface 2–3 clarifying questions when intent is ambiguous
-3. Accept answers in the request body and feed them back into generation context
-**Dependencies**: Requires an LLM provider API key (external credential). Blocked until credentials are available.
-**Next step** — when credentials are available: add a real provider class, wire it up via env var, ship first real model call.
+**Status**: ✅ OpenAI provider shipped. Set `OPENAI_API_KEY` to activate.
+**Why it matters**: The existing heuristic generator produces generic outputs. A real LLM call produces sharper packs.
+**Shipped**:
+- `src/core/llmProvider.ts` — `LlmProvider` interface, `HeuristicProvider`, `StubLlmProvider`, `OpenAiProvider`, `createProvider()` factory
+- `OpenAiProvider`: structured JSON prompt, all fields validated, `confidence` defaults to `"medium"`, injectable fetch for testing
+- `src/server.ts` auto-selects `OpenAiProvider` when `OPENAI_API_KEY` is set
+- `createHandler()` accepts optional `provider?` param — integration boundary is fully testable without credentials
+- 30 unit tests (16 original + 14 OpenAI); 4 integration tests
+**To activate**: Set `OPENAI_API_KEY` in your environment and restart the server.
+**Future**: Pre-generation clarifying questions (accept answers in request body and feed back into generation context).
 
 ### Idea 4 — Repo-Level Constraint Policy Engine (Policy)
 **Status**: Foundation shipped in this milestone.
@@ -95,14 +93,15 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - 17 unit tests
 
 ### Idea 9 — One-Click GitHub Issue + PR Description Creation (Workflow)
-**Status**: PR description export shipped. Live GitHub API is next (requires credentials).
+**Status**: ✅ Fully shipped (PR description + live GitHub issue creation).
 **Why it matters**: Removes copy-paste friction. Every extra step is friction that causes the guardrail to be skipped.
-**Shipped in this milestone**:
+**Shipped**:
 - `src/core/prDescription.ts` with `toPrDescription()`
-- `GET /api/intent-packs/:id/pr-description` returns PR description markdown
-- "Copy as PR Description" button in detail view
-**Next step** — B-GH-LIVE: Accept a GitHub Personal Access Token in local config; wire up live issue creation via GitHub API; save returned issue URL on the pack.
-**Dependencies**: Requires a GitHub PAT; keep local-only for security.
+- `GET /api/intent-packs/:id/pr-description` returns PR description markdown; "Copy as PR Description" button in detail view
+- `src/core/githubClient.ts` — `createGitHubIssue(owner, repo, title, body, token, fetchFn?)`
+- `POST /api/intent-packs/:id/create-github-issue` — validates owner/repo/token, creates issue via GitHub API, saves `githubIssueUrl` on pack
+- "Create GitHub Issue" section in detail view with owner/repo inputs, status messages, and issue link display
+**To activate**: Set `GITHUB_TOKEN` env var, or pass `token` field in the request body.
 
 ### Idea 10 — Intent Version History with Visual Diff (Foundation + Workflow)
 **Status**: ✅ Fully shipped (foundation + B-HISTORY-UI).
@@ -157,18 +156,15 @@ Move an item here only if a single active slice is currently being worked.
 ## Blocked
 Move an item here if it needs user/product input.
 
-### B-LLM-1 — LLM provider integration
-- **Status**: ✅ Provider abstraction layer done (B-LLM-1). Real model integration blocked on credentials.
-- Next step once unblocked: add a real provider class (OpenAI/Anthropic) to `createProvider()`, wire via env var
-
-### B-GH-LIVE — Live GitHub issue creation
-- Blocked on: GitHub PAT or GitHub App credentials
-- Next step once unblocked: accept PAT in local config, wire up issue creation
+(No items currently blocked — all items requiring external credentials have been implemented with env-var activation.)
 
 ## Done
 
-### B-LLM-1 — LLM provider abstraction layer
-- Completed: `src/core/llmProvider.ts` (`LlmProvider` interface, `HeuristicProvider`, `StubLlmProvider`, `createProvider()` factory); `createHandler()` accepts optional `provider?` param; 16 unit tests + 4 integration tests. 240/240 unit tests + 25/25 browser tests pass.
+### B-GH-LIVE — Live GitHub issue creation
+- Completed: `src/core/githubClient.ts`; `POST /api/intent-packs/:id/create-github-issue` route; `githubIssueUrl` field on `StoredIntentPack`; "Create GitHub Issue" section in UI with owner/repo inputs and issue link display. Activate with `GITHUB_TOKEN` env var or per-request token. 269/269 unit tests + 25/25 browser tests pass.
+
+### B-LLM-1 real model — OpenAI provider
+- Completed: `OpenAiProvider` class with injectable fetch, structured JSON prompt, full validation; `OPENAI_API_KEY` auto-activates at server startup; 14 new unit tests. `createProvider({ type: "openai", apiKey })` factory case added. 269/269 tests pass.
 
 ### B-POLICY-2 — Policy warning UI acknowledgement
 - Completed: `⚠` badge in sidebar; "Acknowledge Warnings" button in detail view; gate on "Approved" status; 3 browser tests. 183/183 unit tests + 19/19 browser tests pass.

@@ -1081,3 +1081,159 @@ test("POST /api/intent-pack default (no provider) uses heuristic", async () => {
     assert.equal(b["reasoningMode"], "heuristic");
   });
 });
+
+// ── create-github-issue route tests ──────────────────────────
+
+async function withTestServerGithub(
+  mockGithubFetch: typeof fetch,
+  fn: (baseUrl: string, dataDir: string) => Promise<void>
+): Promise<void> {
+  const dataDir = await (await import("node:fs/promises")).mkdtemp(
+    join(tmpdir(), "ghostrail-gh-test-")
+  );
+  try {
+    const handler = createHandler(dataDir, tmpdir(), undefined, undefined, mockGithubFetch);
+    const server = createServer(handler);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const addr = server.address() as { port: number };
+    const baseUrl = `http://localhost:${addr.port}`;
+    try {
+      await fn(baseUrl, dataDir);
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((err?: Error) => (err ? reject(err) : resolve()))
+      );
+    }
+  } finally {
+    await (await import("node:fs/promises")).rm(dataDir, { recursive: true, force: true });
+  }
+}
+
+function makeGithubMockFetch(issueNumber: number, issueUrl: string): typeof fetch {
+  return async () =>
+    new Response(
+      JSON.stringify({ html_url: issueUrl, number: issueNumber }),
+      { status: 201, headers: { "content-type": "application/json" } }
+    );
+}
+
+test("POST /api/intent-packs/:id/create-github-issue returns 400 when owner is missing", async () => {
+  const mockFetch = makeGithubMockFetch(1, "https://github.com/o/r/issues/1");
+  await withTestServerGithub(mockFetch, async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add caching" });
+    const stored = await saveIntentPack(pack, "Add caching", undefined, dataDir);
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/create-github-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo: "myrepo" }),
+      }
+    );
+    assert.equal(status, 400);
+    assert.match((body as Record<string, string>)["error"], /owner/);
+  });
+});
+
+test("POST /api/intent-packs/:id/create-github-issue returns 400 when repo is missing", async () => {
+  const mockFetch = makeGithubMockFetch(1, "https://github.com/o/r/issues/1");
+  await withTestServerGithub(mockFetch, async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add caching" });
+    const stored = await saveIntentPack(pack, "Add caching", undefined, dataDir);
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/create-github-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: "myorg" }),
+      }
+    );
+    assert.equal(status, 400);
+    assert.match((body as Record<string, string>)["error"], /repo/);
+  });
+});
+
+test("POST /api/intent-packs/:id/create-github-issue returns 400 when token is not available", async () => {
+  const mockFetch = makeGithubMockFetch(1, "https://github.com/o/r/issues/1");
+  await withTestServerGithub(mockFetch, async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add caching" });
+    const stored = await saveIntentPack(pack, "Add caching", undefined, dataDir);
+    // Ensure GITHUB_TOKEN is not set in the env for this request
+    const savedToken = process.env.GITHUB_TOKEN;
+    delete process.env.GITHUB_TOKEN;
+    try {
+      const { status, body } = await fetchJson(
+        `${baseUrl}/api/intent-packs/${stored.id}/create-github-issue`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ owner: "myorg", repo: "myrepo" }),
+        }
+      );
+      assert.equal(status, 400);
+      assert.match((body as Record<string, string>)["error"], /token/i);
+    } finally {
+      if (savedToken !== undefined) process.env.GITHUB_TOKEN = savedToken;
+    }
+  });
+});
+
+test("POST /api/intent-packs/:id/create-github-issue returns 404 for unknown pack", async () => {
+  const mockFetch = makeGithubMockFetch(1, "https://github.com/o/r/issues/1");
+  await withTestServerGithub(mockFetch, async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/00000000-0000-0000-0000-000000000000/create-github-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: "o", repo: "r", token: "gh-token" }),
+      }
+    );
+    assert.equal(status, 404);
+    assert.equal((body as Record<string, string>)["error"], "not found");
+  });
+});
+
+test("POST /api/intent-packs/:id/create-github-issue returns issueUrl and saves it on pack", async () => {
+  const issueUrl = "https://github.com/myorg/myrepo/issues/99";
+  const mockFetch = makeGithubMockFetch(99, issueUrl);
+  await withTestServerGithub(mockFetch, async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Add role-based access control" });
+    const stored = await saveIntentPack(pack, "Add role-based access control", undefined, dataDir);
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/create-github-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: "myorg", repo: "myrepo", token: "gh-token" }),
+      }
+    );
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.equal(b["issueUrl"], issueUrl);
+    assert.equal(b["issueNumber"], 99);
+    const savedPack = b["pack"] as Record<string, unknown>;
+    assert.equal(savedPack["githubIssueUrl"], issueUrl);
+  });
+});
+
+test("POST /api/intent-packs/:id/create-github-issue persists githubIssueUrl to disk", async () => {
+  const issueUrl = "https://github.com/acme/widget/issues/7";
+  const mockFetch = makeGithubMockFetch(7, issueUrl);
+  await withTestServerGithub(mockFetch, async (baseUrl, dataDir) => {
+    const pack = generateIntentPack({ goal: "Migrate to PostgreSQL" });
+    const stored = await saveIntentPack(pack, "Migrate to PostgreSQL", undefined, dataDir);
+    await fetchJson(
+      `${baseUrl}/api/intent-packs/${stored.id}/create-github-issue`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: "acme", repo: "widget", token: "gh-token" }),
+      }
+    );
+    // Re-fetch the pack to confirm persistence
+    const { status, body } = await fetchJson(`${baseUrl}/api/intent-packs/${stored.id}`);
+    assert.equal(status, 200);
+    assert.equal((body as Record<string, unknown>)["githubIssueUrl"], issueUrl);
+  });
+});

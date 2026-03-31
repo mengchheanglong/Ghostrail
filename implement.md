@@ -202,15 +202,50 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
 - `npx playwright test` → 25/25 browser tests pass (unchanged)
 - All existing pack behaviors preserved (backward compat: default provider is HeuristicProvider, existing behavior identical)
 
+## What was completed (continued)
+
+### B-LLM-1 real model — OpenAI provider ✅
+- `src/core/llmProvider.ts` updated:
+  - `OpenAiProvider` class: takes `apiKey`, optional `model` (default `gpt-4o`), injectable `fetchFn` for testing
+  - Structured system prompt instructs model to return JSON-only IntentPack
+  - Parses and validates all 8 required fields; defaults `confidence` to `"medium"` if missing
+  - Throws descriptive errors for HTTP errors, missing content, non-JSON responses, or missing fields
+  - `LlmProviderConfig` union expanded with `{ type: "openai"; apiKey: string; model?: string }`
+  - `createProvider()` factory handles `openai` case
+- `src/server.ts` updated: auto-selects `OpenAiProvider` when `OPENAI_API_KEY` env var is set; logs which provider is active on startup
+- `src/llmProvider.test.ts` — 14 new tests for `OpenAiProvider` (happy path, error paths, confidence default, repositoryContext forwarding, factory)
+
+### B-GH-LIVE — Live GitHub issue creation ✅
+- New `src/core/githubClient.ts`:
+  - `createGitHubIssue(owner, repo, title, body, token, fetchFn?)` → `{ url, number }`
+  - Posts to `https://api.github.com/repos/:owner/:repo/issues` with proper headers (GitHub API v2022-11-28)
+  - URL-encodes owner and repo; throws descriptive errors for HTTP and parsing failures
+- `src/core/types.ts`: `githubIssueUrl?` added to `StoredIntentPack`
+- `src/core/intentPackStore.ts`: `saveGitHubIssueUrl(id, url, dataDir)` added
+- `src/core/handler.ts`:
+  - `createHandler()` gains optional 5th param `githubFetchFn?` for test injection
+  - New route `POST /api/intent-packs/:id/create-github-issue`
+    - Body: `{ owner, repo, token? }` — `token` falls back to `GITHUB_TOKEN` env var
+    - Returns 400 for missing owner/repo/token; 404 for unknown pack; 502 on GitHub API error
+    - Returns `{ issueUrl, issueNumber, pack }` on success; persists `githubIssueUrl` to pack
+- `public/index.html` — "Create GitHub Issue" section in detail view:
+  - Owner + repo inputs; "Create Issue" button
+  - Shows created issue URL as a clickable link after success
+  - Displays success/error status messages; updates local pack state with returned `githubIssueUrl`
+  - `renderGithubIssueLink(pack)` — shows existing issue link when pack already has one
+- `src/githubClient.test.ts` — 10 unit tests with mock fetch (happy path, URL encoding, headers, body, error cases)
+- `src/server.test.ts` — 6 integration tests (missing owner, missing repo, missing token, 404, success + save, persistence)
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 269/269 unit + integration tests pass (was 240 before; +29 tests)
+- `npx playwright test` → 25/25 browser tests pass (unchanged)
+- All existing pack behaviors preserved (backward compat: new fields are optional; default provider unchanged)
+
 ## Where work stopped
-Clean boundary. B-LLM-1 is complete.
+Clean boundary. B-LLM-1 real model and B-GH-LIVE are both complete.
 
 ## Next recommended slice
-
-### Priority 1 — B-GH-LIVE: Live GitHub issue creation
-- Accept a GitHub PAT in local config
-- Wire up `POST /repos/:owner/:repo/issues` via GitHub API
-- Save returned issue URL on the pack
-- **Blocked on**: GitHub PAT or GitHub App credentials (external)
-
-No further unblocked slices remain in the backlog. All non-blocked items are done.
+All planned backlog items are complete. Remaining only requires external credentials to activate:
+- **OPENAI_API_KEY** → enables live OpenAI generation
+- **GITHUB_TOKEN** → enables live GitHub issue creation (or pass token in request body)

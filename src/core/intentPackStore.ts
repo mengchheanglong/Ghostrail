@@ -207,7 +207,30 @@ export async function listPackHistory(
   }
 }
 
-// ── PR link ───────────────────────────────────────────────────
+// ── GitHub issue URL ──────────────────────────────────────────
+
+/**
+ * Saves the GitHub issue URL returned after creating an issue from this pack.
+ * Returns the updated pack or null if not found.
+ */
+export async function saveGitHubIssueUrl(
+  id: string,
+  issueUrl: string,
+  dataDir = defaultDataDir
+): Promise<StoredIntentPack | null> {
+  if (!uuidPattern.test(id)) return null;
+  const filePath = join(dataDir, `${id}.json`);
+  let stored: StoredIntentPack;
+  try {
+    const content = await readFile(filePath, "utf8");
+    stored = JSON.parse(content) as StoredIntentPack;
+  } catch {
+    return null;
+  }
+  stored.githubIssueUrl = issueUrl;
+  await writeFile(filePath, JSON.stringify(stored, null, 2), "utf8");
+  return stored;
+}
 
 /**
  * Attaches a PR URL and optional changed-files list to a pack.

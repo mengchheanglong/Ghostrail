@@ -937,6 +937,19 @@
               <div id="driftResult" style="display:none"></div>
             </div>
 
+            <!-- GitHub issue creation section -->
+            <div id="githubIssueSection" class="drift-section" style="display:none">
+              <h3>Create GitHub Issue</h3>
+              <div id="githubIssueLink" style="display:none; margin-bottom:8px"></div>
+              <div class="notes-editor-actions" style="gap:8px; flex-wrap:wrap; align-items:center">
+                <input id="githubOwnerInput" class="tag-input" placeholder="owner" style="width:120px" />
+                <span style="color:#6b7280">/</span>
+                <input id="githubRepoInput" class="tag-input" placeholder="repo" style="width:160px" />
+                <button id="createGithubIssueBtn" class="btn-drift" style="color:#4ade80; border-color:rgba(74,222,128,0.3)">Create Issue</button>
+              </div>
+              <div id="githubIssueStatus" class="export-status" style="margin-top:6px"></div>
+            </div>
+
             <!-- Pack health section -->
             <div id="healthSection" class="health-section" style="display:none">
               <div class="health-section-header" id="healthToggle">
@@ -1029,6 +1042,12 @@
       const healthBody     = document.getElementById("healthBody");
       const historySection = document.getElementById("historySection");
       const historyContent = document.getElementById("historyContent");
+      const githubIssueSection = document.getElementById("githubIssueSection");
+      const githubOwnerInput   = document.getElementById("githubOwnerInput");
+      const githubRepoInput    = document.getElementById("githubRepoInput");
+      const createGithubIssueBtn = document.getElementById("createGithubIssueBtn");
+      const githubIssueStatus  = document.getElementById("githubIssueStatus");
+      const githubIssueLink    = document.getElementById("githubIssueLink");
 
       // Track the currently selected pack id, full object, and the full unfiltered list
       let selectedId   = null;
@@ -1313,6 +1332,11 @@
         driftInput.value = "";
         driftResult.style.display = "none";
         driftResult.innerHTML = "";
+        // GitHub issue section
+        githubIssueSection.style.display = "";
+        githubIssueStatus.textContent = "";
+        githubIssueStatus.className = "export-status";
+        renderGithubIssueLink(pack);
         // Pack health section
         healthOpen = false;
         healthBody.style.display = "none";
@@ -1358,6 +1382,8 @@
         driftInput.value = "";
         driftResult.style.display = "none";
         driftResult.innerHTML = "";
+        githubIssueSection.style.display = "none";
+        githubIssueStatus.textContent = "";
         healthSection.style.display = "none";
         healthBody.innerHTML = "";
         historySection.style.display = "none";
@@ -1698,6 +1724,62 @@
         } finally {
           analyzeDriftBtn.disabled = false;
           analyzeDriftBtn.textContent = "Analyze Drift";
+        }
+      });
+
+      // ── GitHub issue creation ─────────────────────────────────
+
+      function renderGithubIssueLink(pack) {
+        if (pack.githubIssueUrl) {
+          githubIssueLink.innerHTML = `✅ Issue created: <a href="${escapeHtml(pack.githubIssueUrl)}" target="_blank" rel="noopener noreferrer" style="color:#4ade80">${escapeHtml(pack.githubIssueUrl)}</a>`;
+          githubIssueLink.style.display = "";
+        } else {
+          githubIssueLink.style.display = "none";
+          githubIssueLink.innerHTML = "";
+        }
+      }
+
+      createGithubIssueBtn.addEventListener("click", async () => {
+        if (!selectedId) return;
+        const owner = githubOwnerInput.value.trim();
+        const repo  = githubRepoInput.value.trim();
+        if (!owner || !repo) {
+          githubIssueStatus.textContent = "⚠ Enter owner and repo before creating an issue.";
+          githubIssueStatus.className = "export-status error";
+          return;
+        }
+        createGithubIssueBtn.disabled = true;
+        createGithubIssueBtn.textContent = "Creating…";
+        githubIssueStatus.textContent = "";
+        githubIssueStatus.className = "export-status";
+        try {
+          const res = await fetch("/api/intent-packs/" + encodeURIComponent(selectedId) + "/create-github-issue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ owner, repo }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            githubIssueStatus.textContent = "⚠ " + (data.error || "Failed to create issue.");
+            githubIssueStatus.className = "export-status error";
+            return;
+          }
+          // Update local state with returned pack (now has githubIssueUrl)
+          if (data.pack) {
+            selectedPack = data.pack;
+            const idx = allPacks.findIndex(p => p.id === selectedId);
+            if (idx !== -1) allPacks[idx] = data.pack;
+          }
+          githubIssueStatus.textContent = "";
+          renderGithubIssueLink({ githubIssueUrl: data.issueUrl });
+          githubIssueStatus.textContent = `✅ Issue #${data.issueNumber} created.`;
+          githubIssueStatus.className = "export-status success";
+        } catch (err) {
+          githubIssueStatus.textContent = "⚠ " + (err.message || "Network error");
+          githubIssueStatus.className = "export-status error";
+        } finally {
+          createGithubIssueBtn.disabled = false;
+          createGithubIssueBtn.textContent = "Create Issue";
         }
       });
 

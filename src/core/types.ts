@@ -39,4 +39,5 @@ export interface StoredIntentPack extends IntentPack {
   prLink?: string;
   changedFiles?: string[];
   policyWarnings?: string[];
+  githubIssueUrl?: string;
 }
