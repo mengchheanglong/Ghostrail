@@ -242,8 +242,37 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
 - `npx playwright test` → 25/25 browser tests pass (unchanged)
 - All existing pack behaviors preserved (backward compat: new fields are optional; default provider unchanged)
 
+## What was completed (continued)
+
+### B-E2E — Comprehensive end-to-end pipeline tests ✅
+- New `src/e2e.test.ts` — 27 comprehensive end-to-end tests covering the complete pipeline:
+  - 4 realistic multi-sentence scenarios: billing/payment, auth/admin, database migration, generic feature
+  - No stubs of internal code — heuristic generator, file store, diff parser, drift engine, formatters all run for real
+  - Full field validation on every API response (every field, not just a few)
+  - Groups:
+    - Group 1: Full shape validation for all 4 scenarios (UUID, ISO dates, all array fields, reasoningMode, confidence)
+    - Group 2: Domain-specific output validation (billing/auth/db touchedAreas, constraints, risks, openQuestions)
+    - Group 3: List and single-pack round-trip consistency (GET list, GET :id, field-for-field equality)
+    - Group 4: PATCH all editable fields in sequence with final-GET verification
+    - Group 5: Version history chain (entry count, patchedAt ISO date, complete before-snapshot with all fields)
+    - Group 6: Diff analysis and drift detection (all DriftReport fields, correct matched/scopeCreep/intentGap buckets)
+    - Group 7: Task packet (all TaskPacketJson fields, agent prompt sections, checklist items, context embedding)
+    - Group 8: PR description and export-issue markdown (all sections, all pack content embedded)
+    - Group 9: GitHub issue creation (realistic full GitHub API response body, issueUrl/issueNumber, persistence)
+    - Group 10: Duplication (every field preserved, new id/createdAt)
+    - Group 11: Multi-pack list (all packs present, sorted newest-first, all fields present)
+    - Group 12: Complete soup-to-nuts lifecycle chain (single test chains all 13 operations)
+  - GitHub mock returns the full GitHub Issues API response shape (all standard fields), not just the two our code reads
+  - Reusable assertion helpers: `assertStoredIntentPackShape`, `assertDriftReportShape`, `assertTaskPacketShape`, `assertPrDescriptionShape`, `assertIssueMarkdownShape`
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (was 269 before; +27 tests)
+- `npx playwright test` → 25/25 browser tests pass (unchanged)
+- All existing pack behaviors preserved
+
 ## Where work stopped
-Clean boundary. B-LLM-1 real model and B-GH-LIVE are both complete.
+Clean boundary. B-E2E comprehensive test suite is complete.
 
 ## Next recommended slice
 All planned backlog items are complete. Remaining only requires external credentials to activate:
