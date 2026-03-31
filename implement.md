@@ -265,16 +265,24 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
   - GitHub mock returns the full GitHub Issues API response shape (all standard fields), not just the two our code reads
   - Reusable assertion helpers: `assertStoredIntentPackShape`, `assertDriftReportShape`, `assertTaskPacketShape`, `assertPrDescriptionShape`, `assertIssueMarkdownShape`
 
+### B-BROWSER-WORKFLOW — Full browser workflow Playwright tests ✅
+- New `tests/browser/workflow.spec.ts` — 4 browser tests driving the complete UI workflow:
+  - Test 1: Generate from an empty store — form → Generate → all 6 detail sections render (Constraints, Acceptance Criteria, Non-Goals, Touched Areas, Risks, Open Questions), action buttons enabled, form cleared
+  - Test 2: Full workflow chain — generate → edit goal → add notes → add tag → set status → analyze drift → verify history entries present
+  - Test 3: repositoryContext displayed in detail view after generation
+  - Test 4: Search filters the sidebar by goal keyword (add/clear/change)
+  - Unlike existing feature tests (editing, drift, history etc.) these tests drive the integrated user experience starting from an empty store
+
 ## What was verified
 - `npm run build` → passes (tsc, 0 errors)
-- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (was 269 before; +27 tests)
-- `npx playwright test` → 25/25 browser tests pass (unchanged)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `npx playwright test` → 29/29 browser tests pass (was 25; +4 workflow tests)
 - All existing pack behaviors preserved
 
 ## Where work stopped
-Clean boundary. B-E2E comprehensive test suite is complete.
+Clean boundary. Browser workflow tests are complete.
 
 ## Next recommended slice
-All planned backlog items are complete. Remaining only requires external credentials to activate:
+All planned backlog items are complete and the pipeline is now fully tested at both the API layer (src/e2e.test.ts) and the browser layer (tests/browser/workflow.spec.ts). Remaining only requires external credentials to activate:
 - **OPENAI_API_KEY** → enables live OpenAI generation
 - **GITHUB_TOKEN** → enables live GitHub issue creation (or pass token in request body)

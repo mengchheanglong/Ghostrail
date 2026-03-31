@@ -118,6 +118,11 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Risk: low
 - **Status**: ✅ Done (see B-E2E in Done section)
 
+### B-BROWSER-WORKFLOW — Full browser workflow Playwright tests
+- Value: Prove the integrated UI user experience works — from typing a goal into the generator form through every major feature in a single browser session
+- Scope: new `tests/browser/workflow.spec.ts` (test-only, no production changes)
+- Risk: low
+- **Status**: ✅ Done (see B-BROWSER-WORKFLOW in Done section)
 
 
 ### B15 — Full drift engine
@@ -170,6 +175,9 @@ Move an item here if it needs user/product input.
 
 ### B-E2E — Comprehensive end-to-end pipeline tests
 - Completed: `src/e2e.test.ts` — 27 end-to-end tests covering the complete Ghostrail pipeline (generation → list → get → patch → history → analyze-diff → drift-report → task-packet → pr-description → export-issue → create-github-issue → duplicate → delete). Full field validation on every response. Realistic GitHub API mock (full response body). 296/296 tests pass.
+
+### B-BROWSER-WORKFLOW — Full browser workflow Playwright tests
+- Completed: `tests/browser/workflow.spec.ts` — 4 browser tests driving the complete UI workflow from an empty store: (1) generate from scratch + all sections render, (2) full chain generate→edit→notes→tag→status→drift→history, (3) context shown in detail view, (4) search filters pack list. 29/29 browser tests pass.
 
 ### B-LLM-1 real model — OpenAI provider
 - Completed: `OpenAiProvider` class with injectable fetch, structured JSON prompt, full validation; `OPENAI_API_KEY` auto-activates at server startup; 14 new unit tests. `createProvider({ type: "openai", apiKey })` factory case added. 269/269 tests pass.
