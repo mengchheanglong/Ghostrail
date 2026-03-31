@@ -181,18 +181,36 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
 - `npx playwright test` → 25/25 browser tests pass (was 19 before this slice; +6 tests)
 - All existing pack behaviors preserved (backward compat: new UI sections have no server-side changes)
 
+## What was completed (continued)
+
+### B-LLM-1 — LLM provider abstraction layer ✅
+- New `src/core/llmProvider.ts`:
+  - `LlmProvider` interface: `generate(input: IntentPackInput): Promise<IntentPack>`
+  - `HeuristicProvider` — wraps `generateIntentPack()`, returns `reasoningMode: "heuristic"` (no network I/O)
+  - `StubLlmProvider` — deterministic credential-free stub, returns `reasoningMode: "llm"` for integration boundary testing
+  - `createProvider(config)` factory with exhaustiveness check; `LlmProviderConfig` union ready for future real-model entries
+- `src/core/handler.ts`:
+  - `createHandler()` accepts optional 4th param `provider?: LlmProvider`, defaults to `HeuristicProvider`
+  - Both `/api/intent-pack` and `/api/intent-pack/export-issue` routes use the provider
+  - Removed direct `generateIntentPack` import from handler (now only via provider)
+- `src/llmProvider.test.ts` — 16 unit tests for all providers and factory
+- `src/server.test.ts` — 4 integration tests: stub provider injection, pack persistence via stub, export-issue with stub, default falls back to heuristic
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 240/240 unit + integration tests pass (was 220 before B-LLM-1; +20 tests)
+- `npx playwright test` → 25/25 browser tests pass (unchanged)
+- All existing pack behaviors preserved (backward compat: default provider is HeuristicProvider, existing behavior identical)
+
 ## Where work stopped
-Clean boundary. B-QUALITY, B-HEALTH, and B-HISTORY-UI are all complete.
+Clean boundary. B-LLM-1 is complete.
 
 ## Next recommended slice
 
-### Priority 1 — B-LLM-1: LLM provider abstraction layer
-- Add a provider adapter in `src/core/llmProvider.ts` with a stub that can be replaced with a real model call
-- Even without credentials, the stub lets us test the integration boundary
-- Requires external LLM API key to go live
-
-### Priority 2 — B-GH-LIVE: Live GitHub issue creation
+### Priority 1 — B-GH-LIVE: Live GitHub issue creation
 - Accept a GitHub PAT in local config
 - Wire up `POST /repos/:owner/:repo/issues` via GitHub API
 - Save returned issue URL on the pack
-- Requires GitHub PAT
+- **Blocked on**: GitHub PAT or GitHub App credentials (external)
+
+No further unblocked slices remain in the backlog. All non-blocked items are done.

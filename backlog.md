@@ -37,14 +37,18 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - "Copy as Task Packet" button in detail view
 
 ### Idea 3 — LLM Integration with Pre-Generation Clarifying Questions (Intelligence)
-**Status**: Backlogged.
+**Status**: Provider abstraction layer shipped (B-LLM-1). Real model integration blocked on credentials.
 **Why it matters**: The existing heuristic generator produces generic outputs. A real LLM call produces sharper packs. Pre-generation clarifying questions prevent bad input from producing bad packs.
+**Shipped (B-LLM-1)**:
+- `src/core/llmProvider.ts` — `LlmProvider` interface, `HeuristicProvider`, `StubLlmProvider`, `createProvider()` factory
+- `createHandler()` accepts an optional `provider?: LlmProvider` param — integration boundary is testable without credentials
+- 16 unit tests; 4 integration tests (stub injection, pack persistence, export-issue, default heuristic fallback)
 **Recommended approach**:
-1. Wire up an LLM provider behind the existing `reasoningMode` adapter boundary (already in types.ts)
+1. Add a real OpenAI/Anthropic implementation to the `LlmProviderConfig` union and wire it in `createProvider()`
 2. Before generating, call the model to surface 2–3 clarifying questions when intent is ambiguous
 3. Accept answers in the request body and feed them back into generation context
-**Dependencies**: Requires an LLM provider API key (external credential). Block until credentials are available.
-**Next step** — B-LLM-1: Add a provider abstraction layer and wire up a stub that can be replaced with a real model call.
+**Dependencies**: Requires an LLM provider API key (external credential). Blocked until credentials are available.
+**Next step** — when credentials are available: add a real provider class, wire it up via env var, ship first real model call.
 
 ### Idea 4 — Repo-Level Constraint Policy Engine (Policy)
 **Status**: Foundation shipped in this milestone.
@@ -154,14 +158,17 @@ Move an item here only if a single active slice is currently being worked.
 Move an item here if it needs user/product input.
 
 ### B-LLM-1 — LLM provider integration
-- Blocked on: external LLM provider API key
-- Next step once unblocked: add provider abstraction and wire up first real model call
+- **Status**: ✅ Provider abstraction layer done (B-LLM-1). Real model integration blocked on credentials.
+- Next step once unblocked: add a real provider class (OpenAI/Anthropic) to `createProvider()`, wire via env var
 
 ### B-GH-LIVE — Live GitHub issue creation
 - Blocked on: GitHub PAT or GitHub App credentials
 - Next step once unblocked: accept PAT in local config, wire up issue creation
 
 ## Done
+
+### B-LLM-1 — LLM provider abstraction layer
+- Completed: `src/core/llmProvider.ts` (`LlmProvider` interface, `HeuristicProvider`, `StubLlmProvider`, `createProvider()` factory); `createHandler()` accepts optional `provider?` param; 16 unit tests + 4 integration tests. 240/240 unit tests + 25/25 browser tests pass.
 
 ### B-POLICY-2 — Policy warning UI acknowledgement
 - Completed: `⚠` badge in sidebar; "Acknowledge Warnings" button in detail view; gate on "Approved" status; 3 browser tests. 183/183 unit tests + 19/19 browser tests pass.
