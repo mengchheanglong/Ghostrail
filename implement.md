@@ -94,28 +94,158 @@ Complete a "goal-shift + foundation" milestone across all 7 ordered phases:
 - `npx playwright test` → 12/12 browser tests pass (all existing flows intact)
 - All existing pack behaviors preserved (backward compat: all new fields are optional)
 
+## What was completed (continued)
+
+### B15 — Full drift engine ✅
+- New `src/core/diffParser.ts` with `parseGitDiff(diffText)`:
+  - Extracts changed file paths from standard git diff text
+  - Supports: modified, new, deleted, renamed, and binary files
+  - Returns sorted, deduplicated array of paths (strips `a/`/`b/` prefixes)
+  - Deterministic; handles empty/whitespace input safely
+- New route: `POST /api/intent-packs/:id/analyze-diff` body `{ diffText, prUrl? }`
+  - Parses diff, stores changedFiles on the pack, runs `computeDriftReport`
+  - Returns `{ report, changedFiles }` — report includes matchedFiles, scopeCreep, intentGap, status, summary
+  - Returns 400 for missing/whitespace-only diffText; 404 for unknown pack id
+- `driftReport.ts` extended with `matchedFiles`, `status` (`clean`/`warning`/`drift-detected`/`no-data`), and `changedFiles` in result
+- UI: "Drift Analysis" section in detail view — paste diff, click Analyze, see matched/unexpected/missing buckets with status badge
+- Tests:
+  - 15 unit tests in `src/diffParser.test.ts` covering all diff formats, deduplication, sorting, edge cases
+  - 7 integration tests in `src/server.test.ts` for the analyze-diff route
+  - 4 browser tests in `tests/browser/drift.spec.ts` covering section visibility, empty-input prompt, result rendering, scope-creep bucket
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `npm test` → 183/183 unit + integration tests pass
+- `npx playwright test` → 16/16 browser tests pass (was 12 before B15)
+- All existing pack behaviors preserved (backward compat: all new fields are optional)
+
+## What was completed (continued)
+
+### B-POLICY-2 — Policy warning UI acknowledgement ✅
+- `public/index.html` changes:
+  - CSS: `.policy-warning-indicator` (amber `⚠`) and `.btn-acknowledge` (small amber button)
+  - HTML: "Acknowledge Warnings" button (`#acknowledgeWarningsBtn`) added inside `#policyWarnings` section
+  - JS: `const acknowledgedPackIds = new Set()` — tracks per-session acknowledged packs
+  - Sidebar `renderPackList`: shows `<span class="policy-warning-indicator" title="Unacknowledged policy warnings">⚠</span>` when pack has `policyWarnings` and is not yet acknowledged
+  - `renderPolicyWarnings()`: shows/hides the "Acknowledge Warnings" button based on acknowledgement state
+  - Status change gate: selecting "Approved" with unacknowledged `policyWarnings` reverts the dropdown and shows an inline error "⚠ Acknowledge policy warnings before approving."
+  - Acknowledge button listener: adds pack id to `acknowledgedPackIds`, hides the button, re-renders sidebar (⚠ badge disappears)
+- New `tests/browser/policy.spec.ts` — 3 browser tests:
+  - `⚠ indicator appears in sidebar for a pack with unacknowledged policy warnings`
+  - `selecting Approved with unacknowledged warnings reverts the dropdown and shows an error`
+  - `after acknowledging warnings the ⚠ badge disappears and Approved status is allowed`
+
+## What was completed (continued)
+
+### B-QUALITY — Live goal quality score ✅
+- New `src/core/goalQualityScore.ts` — pure heuristic scorer:
+  - Detects vagueness signals (improve/refactor/optimize/enhance/fix things/make it better/update the system)
+  - Detects scope creep signals (and also/as well as/while we're at it/multiple "also" clauses)
+  - Rewards constraint language (do not break/preserve/backward compat) and specificity language (because/so that/in order to)
+  - Returns score 0–100, level (vague/partial/clear), and actionable suggestions
+  - Exported as TypeScript module for unit testing
+- `src/goalQualityScore.test.ts` — 20 unit tests covering all signal types, level thresholds, score clamping, edge cases
+- `public/index.html` — color-coded quality bar below goal textarea, live-updating on input:
+  - 🔴 Vague (< 35) → 🟡 Partial (35–64) → 🟢 Clear (≥ 65)
+  - Inline suggestions list shown for vague/partial goals; hidden when Clear
+  - Bar hidden until user starts typing
+- `tests/browser/quality.spec.ts` — 3 browser tests: bar hidden when empty, Vague for "Improve the dashboard", Clear for well-specified goal
+
+### B-HEALTH — Pack health score (heuristic) ✅
+- New `src/core/healthScore.ts` — pure multi-dimension scorer:
+  - **Objective Specificity**: goal length, constraint language, vagueness signals
+  - **Acceptance Criteria**: count, testable verb coverage, generic phrase detection
+  - **Constraint Completeness**: preservation language, non-goal explicitness
+  - **Risk Coverage**: count, specific failure modes, sensitive-area coverage, generic risk detection
+  - Weighted average → 0–100 overall score + level (poor/fair/good/excellent)
+- `src/healthScore.test.ts` — 17 unit tests covering each dimension and edge cases
+- `public/index.html` — collapsible "Pack Health" section in detail view:
+  - Score badge showing level (poor/fair/good/excellent) with color coding
+  - Per-dimension score bars with actionable improvement suggestions
+  - Collapses by default; header click toggles
+  - Re-renders when goal is saved
+
+### B-HISTORY-UI — Version history tab in detail view ✅
+- `public/index.html` — "Version History" section below drift analysis:
+  - Loads `GET /api/intent-packs/:id/history` on pack select and after edits
+  - Displays newest-first timeline of snapshots
+  - Each entry shows a field-by-field diff (before/after) for: goal, objective, context, notes, status, tags
+  - Shows "No history yet" for fresh packs
+  - Auto-reloads after goal/notes saves (which create history snapshots)
+- `tests/browser/history.spec.ts` — 3 browser tests: section visible, no-history message, entries after edit
+- `playwright.config.ts` — added `workers: 1` to prevent flaky parallel timeouts in this sandbox environment (25 tests with 2 workers caused intermittent 30s timeouts)
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 220/220 unit + integration tests pass (was 183 before this slice; +37 tests)
+- `npx playwright test` → 25/25 browser tests pass (was 19 before this slice; +6 tests)
+- All existing pack behaviors preserved (backward compat: new UI sections have no server-side changes)
+
+## What was completed (continued)
+
+### B-LLM-1 — LLM provider abstraction layer ✅
+- New `src/core/llmProvider.ts`:
+  - `LlmProvider` interface: `generate(input: IntentPackInput): Promise<IntentPack>`
+  - `HeuristicProvider` — wraps `generateIntentPack()`, returns `reasoningMode: "heuristic"` (no network I/O)
+  - `StubLlmProvider` — deterministic credential-free stub, returns `reasoningMode: "llm"` for integration boundary testing
+  - `createProvider(config)` factory with exhaustiveness check; `LlmProviderConfig` union ready for future real-model entries
+- `src/core/handler.ts`:
+  - `createHandler()` accepts optional 4th param `provider?: LlmProvider`, defaults to `HeuristicProvider`
+  - Both `/api/intent-pack` and `/api/intent-pack/export-issue` routes use the provider
+  - Removed direct `generateIntentPack` import from handler (now only via provider)
+- `src/llmProvider.test.ts` — 16 unit tests for all providers and factory
+- `src/server.test.ts` — 4 integration tests: stub provider injection, pack persistence via stub, export-issue with stub, default falls back to heuristic
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 240/240 unit + integration tests pass (was 220 before B-LLM-1; +20 tests)
+- `npx playwright test` → 25/25 browser tests pass (unchanged)
+- All existing pack behaviors preserved (backward compat: default provider is HeuristicProvider, existing behavior identical)
+
+## What was completed (continued)
+
+### B-LLM-1 real model — OpenAI provider ✅
+- `src/core/llmProvider.ts` updated:
+  - `OpenAiProvider` class: takes `apiKey`, optional `model` (default `gpt-4o`), injectable `fetchFn` for testing
+  - Structured system prompt instructs model to return JSON-only IntentPack
+  - Parses and validates all 8 required fields; defaults `confidence` to `"medium"` if missing
+  - Throws descriptive errors for HTTP errors, missing content, non-JSON responses, or missing fields
+  - `LlmProviderConfig` union expanded with `{ type: "openai"; apiKey: string; model?: string }`
+  - `createProvider()` factory handles `openai` case
+- `src/server.ts` updated: auto-selects `OpenAiProvider` when `OPENAI_API_KEY` env var is set; logs which provider is active on startup
+- `src/llmProvider.test.ts` — 14 new tests for `OpenAiProvider` (happy path, error paths, confidence default, repositoryContext forwarding, factory)
+
+### B-GH-LIVE — Live GitHub issue creation ✅
+- New `src/core/githubClient.ts`:
+  - `createGitHubIssue(owner, repo, title, body, token, fetchFn?)` → `{ url, number }`
+  - Posts to `https://api.github.com/repos/:owner/:repo/issues` with proper headers (GitHub API v2022-11-28)
+  - URL-encodes owner and repo; throws descriptive errors for HTTP and parsing failures
+- `src/core/types.ts`: `githubIssueUrl?` added to `StoredIntentPack`
+- `src/core/intentPackStore.ts`: `saveGitHubIssueUrl(id, url, dataDir)` added
+- `src/core/handler.ts`:
+  - `createHandler()` gains optional 5th param `githubFetchFn?` for test injection
+  - New route `POST /api/intent-packs/:id/create-github-issue`
+    - Body: `{ owner, repo, token? }` — `token` falls back to `GITHUB_TOKEN` env var
+    - Returns 400 for missing owner/repo/token; 404 for unknown pack; 502 on GitHub API error
+    - Returns `{ issueUrl, issueNumber, pack }` on success; persists `githubIssueUrl` to pack
+- `public/index.html` — "Create GitHub Issue" section in detail view:
+  - Owner + repo inputs; "Create Issue" button
+  - Shows created issue URL as a clickable link after success
+  - Displays success/error status messages; updates local pack state with returned `githubIssueUrl`
+  - `renderGithubIssueLink(pack)` — shows existing issue link when pack already has one
+- `src/githubClient.test.ts` — 10 unit tests with mock fetch (happy path, URL encoding, headers, body, error cases)
+- `src/server.test.ts` — 6 integration tests (missing owner, missing repo, missing token, 404, success + save, persistence)
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 269/269 unit + integration tests pass (was 240 before; +29 tests)
+- `npx playwright test` → 25/25 browser tests pass (unchanged)
+- All existing pack behaviors preserved (backward compat: new fields are optional; default provider unchanged)
+
 ## Where work stopped
-Clean boundary. All 7 phases completed.
+Clean boundary. B-LLM-1 real model and B-GH-LIVE are both complete.
 
 ## Next recommended slice
-
-### Priority 1 — B15: Full drift engine
-- Accept actual git diff text via `link-pr`, parse changed file paths, enable richer comparison
-- Add a diff parser to `src/core/driftReport.ts`
-- Still no UI changes needed in v1
-
-### Priority 2 — B-POLICY-2: Policy warning UI acknowledgement
-- Show ⚠️ badge in sidebar for packs with policy warnings
-- Gate status transition to "Approved" when unacknowledged policy warnings exist
-
-### Priority 3 — B-QUALITY: Live goal quality score
-- Pure client-side heuristic scorer runs as user types in the generator form
-- No server changes needed
-
-### Priority 4 — B-HEALTH: Pack health score
-- `src/core/healthScore.ts` — pure function scoring a pack across dimensions
-- Surface in detail view as a collapsible section
-
-### Priority 5 — B-HISTORY-UI: Version history tab
-- UI tab in detail view showing a timeline of history snapshots
-- Field-by-field diff (text comparison)
+All planned backlog items are complete. Remaining only requires external credentials to activate:
+- **OPENAI_API_KEY** → enables live OpenAI generation
+- **GITHUB_TOKEN** → enables live GitHub issue creation (or pass token in request body)

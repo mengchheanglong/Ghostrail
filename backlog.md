@@ -18,14 +18,15 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 ---
 
 ### Idea 1 — PR Diff vs. Intent Pack Drift Detection (Verification)
-**Status**: Foundation shipped. Full engine is next.
+**Status**: ✅ Shipped (foundation + full engine).
 **Why it matters**: The killer feature. Without this, Ghostrail is documentation. With it, Ghostrail can tell you when an agent went rogue or left work incomplete.
-**Foundation shipped in this milestone**:
-- `prLink?` and `changedFiles?` stored on packs
-- `POST /api/intent-packs/:id/link-pr` to attach a PR and changed files
-- `GET /api/intent-packs/:id/drift-report` returns structured `scopeCreep` and `intentGap` arrays
-**Next step** — B15: Full drift engine that accepts actual git diff text, parses changed file paths, and runs the comparison automatically.
-**Dependencies**: None (foundation is complete; full engine needs a diff parser).
+**Shipped**:
+- `src/core/diffParser.ts` — `parseGitDiff()` extracts changed file paths from standard git diff text (modified, new, deleted, renamed, binary files; deduped, sorted)
+- `POST /api/intent-packs/:id/analyze-diff` — accepts diff text, parses files, stores changedFiles on pack, returns `{ report, changedFiles }`
+- `GET /api/intent-packs/:id/drift-report` — returns structured drift report with matchedFiles, scopeCreep, intentGap, status, summary
+- UI: paste-diff textarea + "Analyze Drift" button in detail view; renders matched/unexpected/missing buckets with color-coded status badge
+- 15 unit tests (diffParser), 7 integration tests (analyze-diff route), 4 browser tests (drift UI)
+**Next step**: None for this slice. Future enhancement: deeper semantic matching beyond token-based path matching.
 
 ### Idea 2 — AI Agent Task Packet Generator (Foundation + Workflow)
 **Status**: Shipped in this milestone.
@@ -36,14 +37,16 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - "Copy as Task Packet" button in detail view
 
 ### Idea 3 — LLM Integration with Pre-Generation Clarifying Questions (Intelligence)
-**Status**: Backlogged.
-**Why it matters**: The existing heuristic generator produces generic outputs. A real LLM call produces sharper packs. Pre-generation clarifying questions prevent bad input from producing bad packs.
-**Recommended approach**:
-1. Wire up an LLM provider behind the existing `reasoningMode` adapter boundary (already in types.ts)
-2. Before generating, call the model to surface 2–3 clarifying questions when intent is ambiguous
-3. Accept answers in the request body and feed them back into generation context
-**Dependencies**: Requires an LLM provider API key (external credential). Block until credentials are available.
-**Next step** — B-LLM-1: Add a provider abstraction layer and wire up a stub that can be replaced with a real model call.
+**Status**: ✅ OpenAI provider shipped. Set `OPENAI_API_KEY` to activate.
+**Why it matters**: The existing heuristic generator produces generic outputs. A real LLM call produces sharper packs.
+**Shipped**:
+- `src/core/llmProvider.ts` — `LlmProvider` interface, `HeuristicProvider`, `StubLlmProvider`, `OpenAiProvider`, `createProvider()` factory
+- `OpenAiProvider`: structured JSON prompt, all fields validated, `confidence` defaults to `"medium"`, injectable fetch for testing
+- `src/server.ts` auto-selects `OpenAiProvider` when `OPENAI_API_KEY` is set
+- `createHandler()` accepts optional `provider?` param — integration boundary is fully testable without credentials
+- 30 unit tests (16 original + 14 OpenAI); 4 integration tests
+**To activate**: Set `OPENAI_API_KEY` in your environment and restart the server.
+**Future**: Pre-generation clarifying questions (accept answers in request body and feed back into generation context).
 
 ### Idea 4 — Repo-Level Constraint Policy Engine (Policy)
 **Status**: Foundation shipped in this milestone.
@@ -56,15 +59,12 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 **Dependencies**: Foundation is complete.
 
 ### Idea 5 — Live Goal Quality Score (Intelligence)
-**Status**: Backlogged.
+**Status**: ✅ Shipped (B-QUALITY).
 **Why it matters**: Intervening at input time is cheaper than post-hoc debugging. A real-time quality score trains users to write better goals before generation.
-**Recommended approach**:
-1. Add a client-side quality scorer that runs as the user types
-2. Detect: ambiguity signals ("improve", "refactor", "fix things"), scope creep signals ("and also", "as well as"), missing constraint indicators
-3. Show a color-coded bar: 🔴 Vague → 🟡 Partial → 🟢 Clear
-4. Provide specific inline suggestions
-**Dependencies**: Can be implemented purely client-side. No server changes required.
-**Next step** — B-QUALITY: Pure client-side quality scorer added to the generator form.
+**Shipped**:
+- `src/core/goalQualityScore.ts` — pure heuristic scorer (vagueness, scope creep, constraint/specificity signals, 0–100 score + level + suggestions)
+- `public/index.html` — live color-coded quality bar below goal textarea (🔴 Vague → 🟡 Partial → 🟢 Clear) with actionable suggestions
+- 20 unit tests; 3 browser tests
 
 ### Idea 6 — Protected Areas Registry (Policy)
 **Status**: Foundation shipped in this milestone (via ghostrail-policy.json).
@@ -85,36 +85,30 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Filter by status in sidebar
 
 ### Idea 8 — Pack Health Score with Inline Improvement Suggestions (Intelligence)
-**Status**: Backlogged.
+**Status**: ✅ Shipped (B-HEALTH).
 **Why it matters**: Makes pack quality measurable and improvable. Users get specific feedback on what makes a pack good.
-**Recommended approach**:
-1. `src/core/healthScore.ts` — pure function that scores a pack across dimensions
-2. Dimensions: objective specificity, acceptance criteria testability, constraint completeness, risk coverage
-3. Returns a score (0–100) and specific improvement suggestions per dimension
-4. Surface in detail view as a collapsible "Pack Health" section
-**Dependencies**: Can be implemented without LLM — pure heuristic version first.
-**Next step** — B-HEALTH: Implement heuristic health scorer as a pure function with tests.
+**Shipped**:
+- `src/core/healthScore.ts` — pure 4-dimension scorer (Objective Specificity, Acceptance Criteria, Constraint Completeness, Risk Coverage); 0–100 score + level + per-dimension suggestions
+- `public/index.html` — collapsible "Pack Health" section in detail view with score badge and per-dimension bars
+- 17 unit tests
 
 ### Idea 9 — One-Click GitHub Issue + PR Description Creation (Workflow)
-**Status**: PR description export shipped. Live GitHub API is next (requires credentials).
+**Status**: ✅ Fully shipped (PR description + live GitHub issue creation).
 **Why it matters**: Removes copy-paste friction. Every extra step is friction that causes the guardrail to be skipped.
-**Shipped in this milestone**:
+**Shipped**:
 - `src/core/prDescription.ts` with `toPrDescription()`
-- `GET /api/intent-packs/:id/pr-description` returns PR description markdown
-- "Copy as PR Description" button in detail view
-**Next step** — B-GH-LIVE: Accept a GitHub Personal Access Token in local config; wire up live issue creation via GitHub API; save returned issue URL on the pack.
-**Dependencies**: Requires a GitHub PAT; keep local-only for security.
+- `GET /api/intent-packs/:id/pr-description` returns PR description markdown; "Copy as PR Description" button in detail view
+- `src/core/githubClient.ts` — `createGitHubIssue(owner, repo, title, body, token, fetchFn?)`
+- `POST /api/intent-packs/:id/create-github-issue` — validates owner/repo/token, creates issue via GitHub API, saves `githubIssueUrl` on pack
+- "Create GitHub Issue" section in detail view with owner/repo inputs, status messages, and issue link display
+**To activate**: Set `GITHUB_TOKEN` env var, or pass `token` field in the request body.
 
 ### Idea 10 — Intent Version History with Visual Diff (Foundation + Workflow)
-**Status**: Foundation shipped in this milestone. Visual diff UI is next.
+**Status**: ✅ Fully shipped (foundation + B-HISTORY-UI).
 **Why it matters**: Intent changes are invisible in every existing system. Version-diffed packs give teams a record of how their thinking evolved.
-**Foundation shipped**:
-- `saveHistorySnapshot()` called in `patchIntentPack` before every meaningful edit
-- History stored as `{id}.history.json` — array of `{patchedAt, before}` entries
-- `listPackHistory()` function
-- `GET /api/intent-packs/:id/history` returns history array
-**Next step** — B-HISTORY-UI: History tab in detail view shows a timeline of snapshots with a structured field-by-field diff.
-**Dependencies**: Foundation is complete.
+**Shipped**:
+- Foundation: `saveHistorySnapshot()` in `patchIntentPack`; `{id}.history.json` storage; `listPackHistory()`; `GET /api/intent-packs/:id/history`
+- B-HISTORY-UI: "Version History" section in detail view — newest-first timeline of snapshots with field-by-field before/after diffs; auto-reloads after edits; 3 browser tests
 
 ---
 
@@ -126,30 +120,35 @@ Candidates for the next bounded slice.
 - Scope: `src/core/driftReport.ts` extension; no UI changes initially
 - Risk: medium — diff parsing can be complex; start with file-list comparison only
 - Verification: unit tests for drift comparison logic
+- **Status**: ✅ Done (see B15 in Done section)
 
 ### B-POLICY-2 — Policy warning UI
 - Value: Surface policy warnings prominently in the UI; add acknowledgement gate before "Approved"
 - Scope: detail view only; no new storage
 - Risk: low
 - Verification: browser test for policy warning display
+- **Status**: ✅ Done (see B-POLICY-2 in Done section)
 
 ### B-QUALITY — Live goal quality score
 - Value: Real-time feedback as user types; trains better goal writing
 - Scope: pure client-side; no server changes
 - Risk: low
 - Verification: unit tests for scoring logic; browser test for display
+- **Status**: ✅ Done (see B-QUALITY in Done section)
 
 ### B-HEALTH — Pack health score (heuristic)
 - Value: Per-pack quality measurement with specific improvement suggestions
 - Scope: new `src/core/healthScore.ts`; detail view section
 - Risk: low
 - Verification: unit tests for scorer
+- **Status**: ✅ Done (see B-HEALTH in Done section)
 
 ### B-HISTORY-UI — Version history tab in detail view
 - Value: Surfaces the stored history with structured field diffs
 - Scope: UI-only; history API already exists
 - Risk: low
 - Verification: browser test for history tab
+- **Status**: ✅ Done (see B-HISTORY-UI in Done section)
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -157,15 +156,30 @@ Move an item here only if a single active slice is currently being worked.
 ## Blocked
 Move an item here if it needs user/product input.
 
-### B-LLM-1 — LLM provider integration
-- Blocked on: external LLM provider API key
-- Next step once unblocked: add provider abstraction and wire up first real model call
-
-### B-GH-LIVE — Live GitHub issue creation
-- Blocked on: GitHub PAT or GitHub App credentials
-- Next step once unblocked: accept PAT in local config, wire up issue creation
+(No items currently blocked — all items requiring external credentials have been implemented with env-var activation.)
 
 ## Done
+
+### B-GH-LIVE — Live GitHub issue creation
+- Completed: `src/core/githubClient.ts`; `POST /api/intent-packs/:id/create-github-issue` route; `githubIssueUrl` field on `StoredIntentPack`; "Create GitHub Issue" section in UI with owner/repo inputs and issue link display. Activate with `GITHUB_TOKEN` env var or per-request token. 269/269 unit tests + 25/25 browser tests pass.
+
+### B-LLM-1 real model — OpenAI provider
+- Completed: `OpenAiProvider` class with injectable fetch, structured JSON prompt, full validation; `OPENAI_API_KEY` auto-activates at server startup; 14 new unit tests. `createProvider({ type: "openai", apiKey })` factory case added. 269/269 tests pass.
+
+### B-POLICY-2 — Policy warning UI acknowledgement
+- Completed: `⚠` badge in sidebar; "Acknowledge Warnings" button in detail view; gate on "Approved" status; 3 browser tests. 183/183 unit tests + 19/19 browser tests pass.
+
+### B-QUALITY — Live goal quality score
+- Completed: `src/core/goalQualityScore.ts` (pure heuristic scorer); `src/goalQualityScore.test.ts` (20 unit tests); color-coded quality bar + inline suggestions in `public/index.html`; `tests/browser/quality.spec.ts` (3 browser tests). 220/220 unit tests + 25/25 browser tests pass.
+
+### B-HEALTH — Pack health score (heuristic)
+- Completed: `src/core/healthScore.ts` (4-dimension pure scorer); `src/healthScore.test.ts` (17 unit tests); collapsible "Pack Health" section in detail view. 220/220 unit tests + 25/25 browser tests pass.
+
+### B-HISTORY-UI — Version history tab in detail view
+- Completed: "Version History" section in detail view; loads `GET /api/intent-packs/:id/history`; field-by-field diff timeline; `tests/browser/history.spec.ts` (3 browser tests). 220/220 unit tests + 25/25 browser tests pass.
+
+### B15 — Full drift engine
+- Completed: `src/core/diffParser.ts` with `parseGitDiff()`; `POST /api/intent-packs/:id/analyze-diff`; drift UI (paste textarea + result buckets); 15 unit tests, 7 integration tests, 4 browser tests. 183/183 unit tests + 16/16 browser tests pass.
 
 ### Goal-shift milestone — Intent Guardrail System foundation
 - Completed: Phase 0 (doctrine), Phase 1 (task packet), Phase 2 (status lifecycle), Phase 3 (PR description), Phase 4 (version history), Phase 5 (drift foundation), Phase 6 (policy/protected areas)

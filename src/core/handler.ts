@@ -1,12 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
-import { generateIntentPack } from "./generateIntentPack.js";
 import { toGitHubIssueMarkdown } from "./issueMarkdown.js";
 import { toTaskPacketJson, toAgentPrompt } from "./taskPacket.js";
 import { toPrDescription } from "./prDescription.js";
 import { computeDriftReport } from "./driftReport.js";
 import { parseGitDiff } from "./diffParser.js";
 import { loadPolicy, applyPolicy } from "./policy.js";
+import { HeuristicProvider } from "./llmProvider.js";
+import type { LlmProvider } from "./llmProvider.js";
+import { createGitHubIssue } from "./githubClient.js";
 import {
   saveIntentPack,
   listIntentPacks,
@@ -16,6 +18,7 @@ import {
   duplicateIntentPack,
   linkPrToIntentPack,
   listPackHistory,
+  saveGitHubIssueUrl,
 } from "./intentPackStore.js";
 import type { IntentPackInput, PackStatus } from "./types.js";
 import { VALID_STATUSES } from "./types.js";
@@ -50,7 +53,9 @@ async function serveStatic(pathname: string, publicDir: string, res: any): Promi
   res.end(file);
 }
 
-export function createHandler(dataDir: string, publicDir: string, policyPath?: string) {
+export function createHandler(dataDir: string, publicDir: string, policyPath?: string, provider?: LlmProvider, githubFetchFn?: typeof fetch) {
+  const resolvedProvider: LlmProvider = provider ?? new HeuristicProvider();
+  const resolvedGithubFetch: typeof fetch = githubFetchFn ?? globalThis.fetch;
   return async (req: any, res: any): Promise<void> => {
     try {
       const method = req.method ?? "GET";
@@ -69,7 +74,7 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
           return json(res, 400, { error: "goal is required" });
         }
 
-        const pack = generateIntentPack(body);
+        const pack = await resolvedProvider.generate(body);
         const goalText = body.goal.trim();
         const ctxText = body.repositoryContext?.trim() || undefined;
 
@@ -95,7 +100,7 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
           return json(res, 400, { error: "goal is required" });
         }
 
-        const pack = generateIntentPack(body);
+        const pack = await resolvedProvider.generate(body);
         const markdown = toGitHubIssueMarkdown(pack);
         return json(res, 200, { markdown, pack });
       }
@@ -233,6 +238,46 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
           if (!updated) return json(res, 404, { error: "not found" });
           const report = computeDriftReport(updated);
           return json(res, 200, { report, changedFiles });
+        }
+
+        if (rest.endsWith("/create-github-issue")) {
+          const id = rest.slice(0, -"/create-github-issue".length);
+          const body = await readJson<{ owner?: unknown; repo?: unknown; token?: unknown }>(req);
+
+          if (!body.owner || typeof body.owner !== "string" || !body.owner.trim()) {
+            return json(res, 400, { error: "owner is required and must be a non-empty string" });
+          }
+          if (!body.repo || typeof body.repo !== "string" || !body.repo.trim()) {
+            return json(res, 400, { error: "repo is required and must be a non-empty string" });
+          }
+
+          const token =
+            (typeof body.token === "string" && body.token.trim()) ? body.token.trim()
+            : (process.env.GITHUB_TOKEN ?? "");
+          if (!token) {
+            return json(res, 400, { error: "GitHub token is required: provide token in request body or set GITHUB_TOKEN environment variable" });
+          }
+
+          const pack = await getIntentPackById(id, dataDir);
+          if (!pack) return json(res, 404, { error: "not found" });
+
+          const issueTitle = (pack.goal ?? pack.objective).trim();
+          const issueBody = toGitHubIssueMarkdown(pack);
+
+          try {
+            const result = await createGitHubIssue(
+              body.owner.trim(),
+              body.repo.trim(),
+              issueTitle,
+              issueBody,
+              token,
+              resolvedGithubFetch
+            );
+            const updated = await saveGitHubIssueUrl(id, result.url, dataDir);
+            return json(res, 200, { issueUrl: result.url, issueNumber: result.number, pack: updated ?? pack });
+          } catch (err) {
+            return json(res, 502, { error: err instanceof Error ? err.message : "GitHub API request failed" });
+          }
         }
 
         return json(res, 404, { error: "not found" });
