@@ -7,5 +7,9 @@ node_modules/
 # Build output
 dist/
 
-# Environment files
+# Environment files — never commit real secrets
 .env
+.env.local
+.env.*.local
+# .env.example is committed intentionally (no secrets, only placeholders)
+!.env.example

@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "start": "node --env-file=.env dist/server.js",
+    "dev": "concurrently \"npm start\" \"cd frontend && npm run dev\"",
     "test": "node --test dist/**/*.test.js",
     "test:browser": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "concurrently": "^9.2.1"
   }
 }

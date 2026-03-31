@@ -6,8 +6,10 @@ export default defineConfig({
   workers: 1,
   use: {
     headless: true,
-    launchOptions: {
-      executablePath: process.env.CHROME_PATH ?? "/usr/bin/chromium",
+    launchOptions: process.env.CHROME_PATH ? {
+      executablePath: process.env.CHROME_PATH,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    } : {
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     },
   },
