@@ -572,3 +572,35 @@ Clean boundary. The port of Playwright to the React SPA is fundamentally complet
 
 ## Next recommended slice
 Implement React Error Boundaries to prevent global fallback UI crashes or introduce toggleable light/dark modes utilizing the CSS tokens existing structure.
+
+## What was completed (continued)
+
+### B-TABS — Three-mode tabbed detail view ✅
+- `frontend/src/components/DetailTabs.tsx` — new tab bar component:
+  - Three modes: ✏ Design (default), 🔍 Audit, ↑ Sync
+  - Active tab indicated by `--accent`-coloured underline; inactive tabs use `--text-faint`
+  - Each tab has a predictable ID: `#tab-design`, `#tab-audit`, `#tab-sync`
+- `frontend/src/App.tsx` restructured detail card:
+  - **Design tab**: Policy warnings + acknowledgement gate, Goal/Context/Notes editable fields, Constraints/AC/Non-Goals/Touched Areas/Risks/Open Questions inset panel, confidence + reasoning badges, Tags section
+  - **Audit tab**: Pack Health Score, Drift Analysis, Version History
+  - **Sync tab**: GitHub Issue creation
+  - `activeTab` state resets to `'design'` on every pack switch
+  - Removed duplicate `#statusRow` wrapper (StatusDropdown component already provides it)
+  - Fixed archive deselection: when a pack is archived with `showArchived=false`, `selectedId` is cleared so `#detailCard` hides — fixes pre-existing regression in the React port
+- Test updates (tab navigation added):
+  - `tests/browser/drift.spec.ts` — all 4 tests click `#tab-audit` before drift section checks
+  - `tests/browser/history.spec.ts` — all 3 tests click `#tab-audit` before history section checks
+  - `tests/browser/workflow.spec.ts` — test 1 checks notes/tags on Design tab, then switches to Audit for drift/health/history; test 2 switches to Audit tab before step 6 (drift analysis)
+- All other browser tests (editing, policy, quality, curation, actions) unchanged — they operate on Design tab (default) or the always-visible header
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `npx playwright test` (CHROME_PATH=/usr/bin/chromium-browser) → 29/29 browser tests pass
+- Archive deselection fix confirmed by curation test "archiving a pack hides it from the default list"
+
+## Where work stopped
+Clean boundary. Tabbed layout is complete and all tests pass.
+
+## Next recommended slice
+B-TABS-HEADER: Add an "Export/Sync" dropdown button in the always-visible header to group the three export actions (Copy as Issue, Task Packet, PR Description) into a single menu — reducing button count in the header action bar while keeping them discoverable.

@@ -135,12 +135,9 @@ test("generating from an empty store creates a pack and renders all detail secti
     await expect(page.locator("#statusRow")).toBeVisible();
     await expect(page.locator("#statusSelect")).toBeVisible();
 
-    // ── Notes, tags, drift, health, history sections ─────────
+    // ── Notes and tags sections are in Design tab (default) ──
     await expect(page.locator("#notesSection")).toBeVisible();
     await expect(page.locator("#tagsSection")).toBeVisible();
-    await expect(page.locator("#driftSection")).toBeVisible();
-    await expect(page.locator("#healthSection")).toBeVisible();
-    await expect(page.locator("#historySection")).toBeVisible();
 
     // ── Action buttons are enabled ───────────────────────────
     await expect(page.locator("#exportBtn")).toBeEnabled();
@@ -148,6 +145,12 @@ test("generating from an empty store creates a pack and renders all detail secti
     await expect(page.locator("#prDescBtn")).toBeEnabled();
     await expect(page.locator("#duplicateBtn")).toBeEnabled();
     await expect(page.locator("#deleteBtn")).toBeEnabled();
+
+    // ── Drift, health, and history sections are in the Audit tab
+    await page.click("#tab-audit");
+    await expect(page.locator("#driftSection")).toBeVisible();
+    await expect(page.locator("#healthSection")).toBeVisible();
+    await expect(page.locator("#historySection")).toBeVisible();
 
     // ── Generator form was cleared ───────────────────────────
     await expect(page.locator("#goal")).toHaveValue("");
@@ -203,7 +206,8 @@ test("full browser workflow: generate → edit goal → notes → tag → status
     // Status badge in sidebar should update (re-render happens after PATCH)
     await expect(page.locator("#statusSelect")).toHaveValue("in-progress", { timeout: 5_000 });
 
-    // Step 6: Analyze drift — paste a diff and click Analyze Drift
+    // Step 6: Analyze drift — switch to Audit tab, paste a diff and click Analyze Drift
+    await page.click("#tab-audit");
     await page.fill("#driftInput", BILLING_DIFF);
     await page.click("#analyzeDriftBtn");
     await expect(page.locator("#driftResult")).toBeVisible({ timeout: 10_000 });
@@ -215,8 +219,7 @@ test("full browser workflow: generate → edit goal → notes → tag → status
     await expect(page.locator("#driftResult")).toContainText("src/billing/invoice.ts");
 
     // Step 7: Verify history section has entries (goal, notes, and status edits
-    // each created a snapshot)
-    // History loads asynchronously after each pack-select / save operation
+    // each created a snapshot) — already on Audit tab
     await expect(page.locator("#historySection")).toBeVisible();
     await expect(page.locator("#historyContent")).not.toContainText("Loading", {
       timeout: 5_000,

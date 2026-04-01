@@ -46,6 +46,9 @@ test("history section is visible when a pack is selected", async ({ page }) => {
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
+    // History section is in the Audit tab
+    await page.click("#tab-audit");
+
     await expect(page.locator("#historySection")).toBeVisible();
     await expect(page.locator("#historyContent")).toBeVisible();
   } finally {
@@ -63,6 +66,9 @@ test("history section shows no-history message for a freshly created pack", asyn
 
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
+
+    // History section is in the Audit tab
+    await page.click("#tab-audit");
 
     // Wait for history to load
     await expect(page.locator("#historyContent")).not.toContainText("Loading", { timeout: 5_000 });
@@ -90,6 +96,9 @@ test("history section shows snapshot entries after a pack is edited", async ({ p
 
     // Wait for save to complete and history to reload
     await expect(page.locator("#notesDisplay")).toContainText("First note", { timeout: 10_000 });
+
+    // Switch to Audit tab to verify history section
+    await page.click("#tab-audit");
 
     // History section should now show an entry
     await expect(page.locator("#historyContent")).not.toContainText("Loading", { timeout: 5_000 });

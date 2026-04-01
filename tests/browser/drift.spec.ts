@@ -75,6 +75,9 @@ test("drift section is visible when a pack is selected", async ({ page }) => {
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
+    // Drift section is in the Audit tab
+    await page.click("#tab-audit");
+
     await expect(page.locator("#driftSection")).toBeVisible();
     await expect(page.locator("#analyzeDriftBtn")).toBeVisible();
     await expect(page.locator("#driftInput")).toBeVisible();
@@ -93,6 +96,9 @@ test("clicking Analyze Drift with empty textarea shows a no-diff prompt", async 
 
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
+
+    // Drift section is in the Audit tab
+    await page.click("#tab-audit");
 
     // Do not paste anything — click the button with an empty textarea
     await page.click("#analyzeDriftBtn");
@@ -114,6 +120,9 @@ test("pasting a matching diff and clicking Analyze Drift renders a result", asyn
 
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
+
+    // Drift section is in the Audit tab
+    await page.click("#tab-audit");
 
     await page.fill("#driftInput", BILLING_DIFF);
     await page.click("#analyzeDriftBtn");
@@ -142,6 +151,9 @@ test("diff with unexpected files renders scope-creep bucket in result", async ({
 
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
+
+    // Drift section is in the Audit tab
+    await page.click("#tab-audit");
 
     await page.fill("#driftInput", MIXED_DIFF);
     await page.click("#analyzeDriftBtn");

@@ -160,6 +160,12 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Verification: browser test for history tab
 - **Status**: ✅ Done (see B-HISTORY-UI in Done section)
 
+### B-TABS-HEADER — Export/Sync dropdown in detail card header
+- Value: Reduce action bar clutter — consolidate "Copy as Issue", "Copy Task Packet", "Copy PR Description" into a single "Export ▾" dropdown, following the Action Hub design recommendation
+- Scope: `frontend/src/components/ActionButtons.tsx` only; no server changes
+- Risk: low — all export buttons retain their IDs inside the dropdown; no test changes needed if IDs are preserved
+- Verification: existing action button browser tests should still pass
+
 ## In progress
 Move an item here only if a single active slice is currently being worked.
 
@@ -169,6 +175,9 @@ Move an item here if it needs user/product input.
 (No items currently blocked — all items requiring external credentials have been implemented with env-var activation.)
 
 ## Done
+
+### B-TABS — Three-mode tabbed detail view
+- Completed: `frontend/src/components/DetailTabs.tsx` (Design / Audit / Sync tab bar); `frontend/src/App.tsx` restructured with Design=default (goal/policy/constraints), Audit (health/drift/history), Sync (GitHub issue). Archive deselection bug fixed. Browser tests updated. 296/296 unit tests + 29/29 browser tests pass.
 
 ### B-GH-LIVE — Live GitHub issue creation
 - Completed: `src/core/githubClient.ts`; `POST /api/intent-packs/:id/create-github-issue` route; `githubIssueUrl` field on `StoredIntentPack`; "Create GitHub Issue" section in UI with owner/repo inputs and issue link display. Activate with `GITHUB_TOKEN` env var or per-request token. 269/269 unit tests + 25/25 browser tests pass.
