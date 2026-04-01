@@ -604,3 +604,28 @@ Clean boundary. Tabbed layout is complete and all tests pass.
 
 ## Next recommended slice
 B-TABS-HEADER: Add an "Export/Sync" dropdown button in the always-visible header to group the three export actions (Copy as Issue, Task Packet, PR Description) into a single menu — reducing button count in the header action bar while keeping them discoverable.
+
+## What was completed (continued)
+
+### B-TABS-HEADER — Export dropdown in action bar ✅
+- `frontend/src/components/ActionButtons.tsx` updated:
+  - Three flat export buttons (`exportBtn`, `taskPacketBtn`, `prDescBtn`) consolidated into a single `📤 Export ▾` dropdown trigger (`#exportDropdownBtn`)
+  - Dropdown panel is **always rendered in the DOM** (CSS-only show/hide via `max-height`/`opacity`/`pointer-events`), so all three button IDs remain findable by Playwright even when collapsed
+  - `exportOpen` state + `exportRef` with `mousedown` click-outside listener to close on focus loss
+  - Each export action closes the dropdown after invocation
+  - `tabIndex` toggled: 0 when open, -1 when closed (keyboard accessibility)
+  - Transition: `max-height 0.18s var(--ease-out), opacity 0.18s var(--ease-out)` (consistent easing)
+  - Trigger icon: `📤 Export` (not ambiguous upward arrow)
+- No test changes required — existing `toBeEnabled()` assertions in `workflow.spec.ts:143-145` still pass because `toBeEnabled()` checks the `disabled` attribute, not element visibility
+
+## What was verified
+- `cd frontend && npm run build` → passes (tsc + vite, 0 errors)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 29/29 browser tests pass (unchanged)
+- CodeQL — 0 alerts
+
+## Where work stopped
+Clean boundary. Export dropdown is complete with no regressions.
+
+## Next recommended slice
+B-SIDEBAR-SMART: "Smart Folders" in sidebar — group packs into labeled sections: "Ready for Review" (approved, no policy warnings), "High Drift Detected" (drift-detected status), "Starred". Currently the sidebar is a flat chronological list. This would make navigation faster for users managing many packs.
