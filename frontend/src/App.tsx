@@ -144,6 +144,9 @@ function App() {
                   <span>{new Date(selectedPack.createdAt).toLocaleString()}</span>
                 </div>
 
+                <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-faint)', margin: '0 0 4px' }}>
+                  Objective
+                </p>
                 <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.4, margin: '0 0 16px' }}>
                   {selectedPack.objective}
                 </p>
@@ -245,10 +248,39 @@ function App() {
                 )}
               </div>
             ) : (
-              <div className="card no-top-margin" style={{ textAlign: 'center', padding: '60px 24px' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px', opacity: 0.4 }}>📋</div>
-                <p className="muted">Select a saved intent pack from the sidebar to view details.</p>
-              </div>
+              <>
+                {/* Still loading — show a neutral spinner card */}
+                {isLoading && (
+                  <div className="card no-top-margin" style={{ textAlign: 'center', padding: '60px 24px' }}>
+                    <p className="muted">Loading…</p>
+                  </div>
+                )}
+
+                {/* Getting-started guide — shown only when the store is empty and load is complete */}
+                {!isLoading && packs.length === 0 && (
+                  <div className="card no-top-margin" style={{ padding: '32px 28px' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🚀</div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 8px' }}>Get started with Ghostrail</h3>
+                    <p className="muted" style={{ marginBottom: '20px' }}>
+                      Ghostrail turns a vague feature request into a structured intent pack — capturing goal, constraints, acceptance criteria, and risks — so AI-generated work stays auditable and reviewable.
+                    </p>
+                    <ol style={{ paddingLeft: '20px', color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 2, margin: 0 }}>
+                      <li>Write your feature request in the form above</li>
+                      <li>Click <strong style={{ color: 'var(--text)' }}>Generate Intent Pack</strong></li>
+                      <li>Review the structured output here in the detail view</li>
+                      <li>Use <strong style={{ color: 'var(--text)' }}>Audit</strong> to check quality and drift, <strong style={{ color: 'var(--text)' }}>Sync</strong> to publish to GitHub</li>
+                    </ol>
+                  </div>
+                )}
+
+                {/* Select-a-pack hint — shown when packs exist but none is selected */}
+                {!isLoading && packs.length > 0 && (
+                  <div className="card no-top-margin" style={{ textAlign: 'center', padding: '60px 24px' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '16px', opacity: 0.4 }}>📋</div>
+                    <p className="muted">Select a saved intent pack from the sidebar to view details.</p>
+                  </div>
+                )}
+              </>
             )}
           </main>
         </div>

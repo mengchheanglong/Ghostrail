@@ -6,11 +6,13 @@ export async function fetchPacks(): Promise<IntentPack[]> {
   return res.json();
 }
 
-export async function generatePack(goal: string, context?: string): Promise<IntentPack> {
+export async function generatePack(goal: string, context?: string, answers?: string[]): Promise<IntentPack> {
+  const body: Record<string, unknown> = { goal, repositoryContext: context || undefined };
+  if (answers && answers.length > 0) body.answers = answers;
   const res = await fetch('/api/intent-pack', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ goal, repositoryContext: context || undefined }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const data = await res.json();
@@ -89,4 +91,22 @@ export async function fetchPrDescription(id: string): Promise<{ markdown: string
   const res = await fetch(`/api/intent-packs/${encodeURIComponent(id)}/pr-description`);
   if (!res.ok) throw new Error('Failed to fetch PR description');
   return res.json();
+}
+
+export async function fetchClarifyingQuestions(
+  goal: string,
+  context?: string
+): Promise<string[]> {
+  try {
+    const res = await fetch('/api/intent-pack/clarify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal, repositoryContext: context || undefined }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.clarifyingQuestions) ? data.clarifyingQuestions : [];
+  } catch {
+    return []; // graceful degradation: if clarify fails, skip questions
+  }
 }

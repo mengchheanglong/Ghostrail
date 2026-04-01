@@ -39,6 +39,130 @@ async function fetchJson(
   return { status: res.status, body };
 }
 
+// ── Clarify route tests ───────────────────────────────────────
+
+test("POST /api/intent-pack/clarify returns clarifying questions for a vague goal", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/clarify`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: "Add notifications" }),
+      }
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(
+      Array.isArray(b["clarifyingQuestions"]),
+      "response should have clarifyingQuestions array"
+    );
+    assert.ok(
+      (b["clarifyingQuestions"] as string[]).length > 0,
+      "vague goal should yield at least one question"
+    );
+    assert.ok(
+      (b["clarifyingQuestions"] as string[]).every((q) => typeof q === "string"),
+      "all questions should be strings"
+    );
+  });
+});
+
+test("POST /api/intent-pack/clarify returns 0 questions for a fully-specified goal", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/clarify`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goal:
+            "Add subscription upgrade flow only for premium accounts " +
+            "without breaking existing billing flows. Done when tests pass.",
+        }),
+      }
+    );
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.deepStrictEqual(
+      b["clarifyingQuestions"],
+      [],
+      "fully-specified goal should return empty questions array"
+    );
+  });
+});
+
+test("POST /api/intent-pack/clarify without goal returns 400", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(
+      `${baseUrl}/api/intent-pack/clarify`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+
+    assert.equal(status, 400);
+    assert.equal(
+      (body as Record<string, string>)["error"],
+      "goal is required"
+    );
+  });
+});
+
+test("POST /api/intent-pack with answers enriches context and returns a stored pack", async () => {
+  await withTestServer(async (baseUrl) => {
+    const { status, body } = await fetchJson(`${baseUrl}/api/intent-pack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        goal: "Add notifications",
+        answers: [
+          "Only for billing events",
+          "Must not break existing email notifications",
+        ],
+      }),
+    });
+
+    assert.equal(status, 200);
+    const b = body as Record<string, unknown>;
+    assert.ok(typeof b["id"] === "string", "response should have id");
+    assert.ok(
+      typeof b["objective"] === "string",
+      "response should have objective"
+    );
+    assert.ok(
+      typeof b["createdAt"] === "string",
+      "response should have createdAt"
+    );
+  });
+});
+
+test("POST /api/intent-pack with empty answers array behaves identically to no answers", async () => {
+  await withTestServer(async (baseUrl, dataDir) => {
+    const noAnswers = await fetchJson(`${baseUrl}/api/intent-pack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal: "Add a dashboard widget" }),
+    });
+    const withEmpty = await fetchJson(`${baseUrl}/api/intent-pack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal: "Add a dashboard widget", answers: [] }),
+    });
+    assert.equal(noAnswers.status, 200);
+    assert.equal(withEmpty.status, 200);
+    // Both should produce stored packs with identical structure (objective matches goal)
+    const a = noAnswers.body as Record<string, unknown>;
+    const b = withEmpty.body as Record<string, unknown>;
+    assert.equal(a["objective"], b["objective"]);
+    void dataDir; // used only for server isolation
+  });
+});
+
 // ── Export-issue route tests ──────────────────────────────────
 
 test("POST /api/intent-pack/export-issue with a valid goal returns markdown and pack", async () => {

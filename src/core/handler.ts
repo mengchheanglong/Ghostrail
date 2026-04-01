@@ -9,6 +9,7 @@ import { loadPolicy, applyPolicy } from "./policy.js";
 import { HeuristicProvider } from "./llmProvider.js";
 import type { LlmProvider } from "./llmProvider.js";
 import { createGitHubIssue } from "./githubClient.js";
+import { generateClarifyingQuestions } from "./clarifyingQuestions.js";
 import {
   saveIntentPack,
   listIntentPacks,
@@ -68,13 +69,54 @@ export function createHandler(dataDir: string, publicDir: string, policyPath?: s
         return json(res, 200, { ok: true, service: "ghostrail" });
       }
 
+      if (method === "POST" && url.pathname === "/api/intent-pack/clarify") {
+        const body = await readJson<{ goal?: unknown; repositoryContext?: unknown }>(req);
+        if (!body.goal || typeof body.goal !== "string" || !body.goal.trim()) {
+          return json(res, 400, { error: "goal is required" });
+        }
+        const ctx =
+          typeof body.repositoryContext === "string"
+            ? body.repositoryContext.trim()
+            : undefined;
+        const clarifyingQuestions = generateClarifyingQuestions(
+          body.goal.trim(),
+          ctx
+        );
+        return json(res, 200, { clarifyingQuestions });
+      }
+
       if (method === "POST" && url.pathname === "/api/intent-pack") {
-        const body = await readJson<IntentPackInput>(req);
+        const body = await readJson<IntentPackInput & { answers?: unknown }>(req);
         if (!body.goal || !body.goal.trim()) {
           return json(res, 400, { error: "goal is required" });
         }
 
-        const pack = await resolvedProvider.generate(body);
+        // Extract and sanitise clarifying answers if provided
+        const rawAnswers: string[] =
+          Array.isArray(body.answers)
+            ? (body.answers as unknown[])
+                .filter((a): a is string => typeof a === "string" && !!(a as string).trim())
+                .map((a) => (a as string).trim())
+            : [];
+
+        // Enrich repository context with answers so both heuristic and LLM providers benefit
+        const ctxParts: string[] = [];
+        if (body.repositoryContext?.trim()) {
+          ctxParts.push(body.repositoryContext.trim());
+        }
+        if (rawAnswers.length > 0) {
+          ctxParts.push(
+            "Clarifying answers from the requester:\n" +
+              rawAnswers.map((a, i) => `${i + 1}. ${a}`).join("\n")
+          );
+        }
+
+        const enrichedInput: IntentPackInput = {
+          goal: body.goal,
+          ...(ctxParts.length > 0 ? { repositoryContext: ctxParts.join("\n\n") } : {}),
+        };
+
+        const pack = await resolvedProvider.generate(enrichedInput);
         const goalText = body.goal.trim();
         const ctxText = body.repositoryContext?.trim() || undefined;
 
