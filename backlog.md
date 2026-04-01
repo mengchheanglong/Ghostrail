@@ -179,6 +179,13 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Scope: Small UI addition in sidebar header; uses existing `GET /api/intent-packs` endpoint; no server changes
 - Risk: low — read-only operation using an existing API
 - Verification: browser test that clicking "Export JSON" downloads a file containing the saved packs
+- **Status**: ✅ Done (see B-EXPORT-HISTORY in Done section)
+
+### B-CLARIFYING-QUESTIONS — Pre-generation clarifying questions
+- Value: Before generating a pack, surface 1–3 short questions about the goal (ambiguity, scope, constraints) so the generated pack is more precise. Closes the loop on Idea 3 from the roadmap (LLM clarifying questions were listed but the pre-generation question flow was never built).
+- Scope: Server — extend `POST /api/intent-packs/generate`; if no `answers` in body, return `{ clarifyingQuestions: string[] }` instead of generating. UI — show question prompts + text inputs; re-submit with answers.
+- Risk: medium — changes the generation flow; existing direct-generate tests must still work (with empty answers or skip flag)
+- Verification: unit tests for question generation; integration test for answers-included generation; browser test for question UI
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.

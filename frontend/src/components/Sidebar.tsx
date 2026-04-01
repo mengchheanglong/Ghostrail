@@ -21,6 +21,17 @@ const FILTER_DEFS: { id: SidebarFilter; label: string }[] = [
   { id: 'in-progress',  label: '▶ Active'    },
 ];
 
+function downloadAllPacks(packs: IntentPack[]): void {
+  const json = JSON.stringify(packs, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ghostrail-packs-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function matchesFilter(pack: IntentPack, filter: SidebarFilter, acknowledgedPacks?: Set<string>): boolean {
   switch (filter) {
     case 'all':          return true;
@@ -66,9 +77,34 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="card no-top-margin">
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <p className="section-title" style={{ margin: 0 }}>Saved Packs</p>
-          <span className="badge badge-muted">{packs.length}</span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span className="badge badge-muted">{packs.length}</span>
+            {packs.length > 0 && (
+              <button
+                id="exportAllJsonBtn"
+                onClick={() => downloadAllPacks(packs)}
+                title="Export all packs as JSON"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-faint)',
+                  fontSize: '0.68rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ⬇ JSON
+              </button>
+            )}
+          </div>
         </div>
 
         <input

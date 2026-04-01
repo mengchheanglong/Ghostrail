@@ -655,3 +655,25 @@ Clean boundary. Smart folder filter pills complete.
 
 ## Next recommended slice
 B-EXPORT-HISTORY: Add an "Export All as JSON" button to the sidebar (or header) that downloads the full list of packs as a JSON file. Useful for backup and external tooling. No new API needed — the list endpoint already exists; just a small UI addition.
+
+### B-EXPORT-HISTORY — Export all packs as JSON ✅
+- `frontend/src/components/Sidebar.tsx` updated:
+  - Added `downloadAllPacks(packs)` pure helper: serialises all packs to pretty-printed JSON, creates a `Blob`, triggers download via `<a download>` click, revokes the object URL
+  - Sidebar header: count badge + `#exportAllJsonBtn` button (only rendered when `packs.length > 0`)
+  - Filename: `ghostrail-packs-YYYY-MM-DD.json`
+  - Downloads the full `packs` prop (all packs including archived), not just the filtered view
+- `tests/browser/export-json.spec.ts` — 3 new browser tests:
+  1. Button absent when store is empty
+  2. Button appears once packs exist
+  3. Clicking button triggers a download; filename matches `ghostrail-packs-YYYY-MM-DD.json`; content is valid JSON array containing the saved pack
+
+## What was verified
+- `cd frontend && npm run build` → 0 errors (tsc + vite)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 36/36 browser tests pass (33 existing + 3 new)
+
+## Where work stopped
+Clean boundary. Export all packs as JSON complete.
+
+## Next recommended slice
+B-CLARIFYING-QUESTIONS: Pre-generation clarifying questions flow (Idea 3 from roadmap). Before generating, the server returns 1-3 short clarifying questions about the goal; the user answers them in the UI; answers are included in the generation context. Server-side: extend `POST /api/intent-packs/generate` to accept an optional `answers?: string[]` in the request body; if absent and heuristic mode, return `{ clarifyingQuestions: string[] }` instead of generating. UI: show question prompts + input fields before the Generate button.
