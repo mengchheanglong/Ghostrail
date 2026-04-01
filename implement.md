@@ -677,3 +677,30 @@ Clean boundary. Export all packs as JSON complete.
 
 ## Next recommended slice
 B-CLARIFYING-QUESTIONS: Pre-generation clarifying questions flow (Idea 3 from roadmap). Before generating, the server returns 1-3 short clarifying questions about the goal; the user answers them in the UI; answers are included in the generation context. Server-side: extend `POST /api/intent-packs/generate` to accept an optional `answers?: string[]` in the request body; if absent and heuristic mode, return `{ clarifyingQuestions: string[] }` instead of generating. UI: show question prompts + input fields before the Generate button.
+
+### B-UX-1 — UX/UI readability improvements ✅
+- `frontend/src/components/DetailTabs.tsx` updated:
+  - Added `desc` and `title` fields to `TABS`; `title` renders as native tooltip on hover
+  - Each tab button now shows a two-line label: primary row (icon + tab name) + subtitle row (e.g. "Goal · Constraints · Criteria", "Health · Drift · History", "GitHub Issues")
+  - Changed Sync tab icon from `↑` (ambiguous up-arrow) to `🔗` (link — intuitive for GitHub)
+  - Tab button layout changed to `flex-direction: column` to accommodate subtitle row
+- `frontend/src/components/GeneratorForm.tsx` updated:
+  - Section title changed from "New Feature Request" to "Generate Intent Pack" (clearer action label)
+  - Added a 1-sentence description below the title explaining what a pack contains (goal, constraints, acceptance criteria, risks, touched areas)
+- `frontend/src/App.tsx` updated:
+  - Empty state now differentiates three cases:
+    1. Loading in progress → "Loading…" spinner card (no flicker of stale empty-state content)
+    2. Empty store (0 packs, not loading) → Getting-started guide card with product summary + 4 numbered steps
+    3. Packs exist but none selected → Original "Select a saved intent pack" card (unchanged path for existing users)
+  - Added "OBJECTIVE" field label above the generated objective text in the detail card header, so users understand the bold text is AI-generated (not the user's raw input)
+
+## What was verified
+- `cd frontend && npm run build` → 0 errors (tsc + vite)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 36/36 browser tests pass (unchanged — all IDs and tested text strings preserved)
+
+## Where work stopped
+Clean boundary. UX readability improvements complete.
+
+## Next recommended slice
+B-CLARIFYING-QUESTIONS: Pre-generation clarifying questions flow (Idea 3 from roadmap). Before generating, the server returns 1-3 short clarifying questions about the goal; the user answers them in the UI; answers are included in the generation context. Server-side: extend `POST /api/intent-packs/generate` to accept an optional `answers?: string[]` in the request body; if absent and heuristic mode, return `{ clarifyingQuestions: string[] }` instead of generating. UI: show question prompts + input fields before the Generate button.

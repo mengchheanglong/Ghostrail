@@ -46,7 +46,10 @@ export function GeneratorForm({ onPackCreated }: { onPackCreated: () => void }) 
 
   return (
     <div className="card" style={{ marginTop: 0 }}>
-      <p className="section-title" style={{ marginBottom: '12px' }}>New Feature Request</p>
+      <p className="section-title" style={{ marginBottom: '4px' }}>Generate Intent Pack</p>
+      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+        Describe a feature or change in plain language. Ghostrail will extract a structured pack with goal, constraints, acceptance criteria, risks, and touched areas.
+      </p>
 
       {/* Goal textarea */}
       <textarea
