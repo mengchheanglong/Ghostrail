@@ -11,6 +11,37 @@ const STATUS_META: Record<string, { label: string; badge: string }> = {
   abandoned:   { label: 'Abandoned',   badge: 'badge-muted'  },
 };
 
+type SidebarFilter = 'all' | 'starred' | 'flagged' | 'ready' | 'in-progress';
+
+const FILTER_DEFS: { id: SidebarFilter; label: string }[] = [
+  { id: 'all',          label: 'All'         },
+  { id: 'starred',      label: '⭐ Starred'   },
+  { id: 'flagged',      label: '⚠ Flagged'   },
+  { id: 'ready',        label: '✓ Ready'     },
+  { id: 'in-progress',  label: '▶ Active'    },
+];
+
+function downloadAllPacks(packs: IntentPack[]): void {
+  const json = JSON.stringify(packs, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ghostrail-packs-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function matchesFilter(pack: IntentPack, filter: SidebarFilter, acknowledgedPacks?: Set<string>): boolean {
+  switch (filter) {
+    case 'all':          return true;
+    case 'starred':      return !!pack.starred;
+    case 'flagged':      return !!(pack.policyWarnings?.length && !acknowledgedPacks?.has(pack.id));
+    case 'ready':        return pack.status === 'approved';
+    case 'in-progress':  return pack.status === 'in-progress';
+  }
+}
+
 export function Sidebar({
   packs, isLoading, error, selectedId, onSelect, showArchived, onToggleArchived, acknowledgedPacks,
 }: {
@@ -24,13 +55,20 @@ export function Sidebar({
   acknowledgedPacks?: Set<string>;
 }) {
   const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState<SidebarFilter>('all');
 
   const visiblePacks = packs.filter(p => {
     if (!showArchived && p.archived) return false;
     return true;
   });
 
+  // Count packs per filter for badge display
+  const filterCounts = Object.fromEntries(
+    FILTER_DEFS.map(f => [f.id, visiblePacks.filter(p => matchesFilter(p, f.id, acknowledgedPacks)).length])
+  ) as Record<SidebarFilter, number>;
+
   const filtered = visiblePacks.filter(p => {
+    if (!matchesFilter(p, activeFilter, acknowledgedPacks)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return p.goal?.toLowerCase().includes(q) || p.objective?.toLowerCase().includes(q);
@@ -39,9 +77,34 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="card no-top-margin">
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <p className="section-title" style={{ margin: 0 }}>Saved Packs</p>
-          <span className="badge badge-muted">{packs.length}</span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span className="badge badge-muted">{packs.length}</span>
+            {packs.length > 0 && (
+              <button
+                id="exportAllJsonBtn"
+                onClick={() => downloadAllPacks(packs)}
+                title="Export all packs as JSON"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-faint)',
+                  fontSize: '0.68rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ⬇ JSON
+              </button>
+            )}
+          </div>
         </div>
 
         <input
@@ -65,6 +128,39 @@ export function Sidebar({
           Show archived
         </label>
 
+        {/* Smart folder filter pills — only shown when there are visible packs */}
+        {visiblePacks.length > 0 && (
+          <div id="sidebarFilters" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
+            {FILTER_DEFS.filter(f => f.id === 'all' || filterCounts[f.id] > 0).map(f => (
+              <button
+                key={f.id}
+                id={`sidebarFilter-${f.id}`}
+                onClick={() => setActiveFilter(f.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '3px 9px',
+                  borderRadius: '99px',
+                  border: `1px solid ${activeFilter === f.id ? 'rgba(99,102,241,0.5)' : 'var(--border)'}`,
+                  background: activeFilter === f.id ? 'rgba(99,102,241,0.15)' : 'transparent',
+                  color: activeFilter === f.id ? '#a5b4fc' : 'var(--text-faint)',
+                  fontSize: '0.72rem',
+                  fontWeight: activeFilter === f.id ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {f.label}
+                {f.id !== 'all' && filterCounts[f.id] > 0 && (
+                  <span style={{ opacity: 0.75 }}>{filterCounts[f.id]}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         {isLoading && (
           <div style={{ padding: '20px 0', textAlign: 'center' }}>
             <span className="muted" style={{ fontSize: '0.85rem' }}>Loading…</span>
@@ -73,7 +169,11 @@ export function Sidebar({
         {error && <div className="alert alert-error" style={{ marginBottom: '8px' }}>{error}</div>}
         {!isLoading && !error && filtered.length === 0 && (
           <p id="packListState" className="muted" style={{ fontSize: '0.82rem', textAlign: 'center', padding: '16px 0' }}>
-            {search ? 'No packs match your search.' : 'No saved packs yet'}
+            {search
+              ? 'No packs match your search.'
+              : activeFilter !== 'all'
+                ? 'No packs in this group.'
+                : 'No saved packs yet'}
           </p>
         )}
 

@@ -572,3 +572,108 @@ Clean boundary. The port of Playwright to the React SPA is fundamentally complet
 
 ## Next recommended slice
 Implement React Error Boundaries to prevent global fallback UI crashes or introduce toggleable light/dark modes utilizing the CSS tokens existing structure.
+
+## What was completed (continued)
+
+### B-TABS — Three-mode tabbed detail view ✅
+- `frontend/src/components/DetailTabs.tsx` — new tab bar component:
+  - Three modes: ✏ Design (default), 🔍 Audit, ↑ Sync
+  - Active tab indicated by `--accent`-coloured underline; inactive tabs use `--text-faint`
+  - Each tab has a predictable ID: `#tab-design`, `#tab-audit`, `#tab-sync`
+- `frontend/src/App.tsx` restructured detail card:
+  - **Design tab**: Policy warnings + acknowledgement gate, Goal/Context/Notes editable fields, Constraints/AC/Non-Goals/Touched Areas/Risks/Open Questions inset panel, confidence + reasoning badges, Tags section
+  - **Audit tab**: Pack Health Score, Drift Analysis, Version History
+  - **Sync tab**: GitHub Issue creation
+  - `activeTab` state resets to `'design'` on every pack switch
+  - Removed duplicate `#statusRow` wrapper (StatusDropdown component already provides it)
+  - Fixed archive deselection: when a pack is archived with `showArchived=false`, `selectedId` is cleared so `#detailCard` hides — fixes pre-existing regression in the React port
+- Test updates (tab navigation added):
+  - `tests/browser/drift.spec.ts` — all 4 tests click `#tab-audit` before drift section checks
+  - `tests/browser/history.spec.ts` — all 3 tests click `#tab-audit` before history section checks
+  - `tests/browser/workflow.spec.ts` — test 1 checks notes/tags on Design tab, then switches to Audit for drift/health/history; test 2 switches to Audit tab before step 6 (drift analysis)
+- All other browser tests (editing, policy, quality, curation, actions) unchanged — they operate on Design tab (default) or the always-visible header
+
+## What was verified
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `npx playwright test` (CHROME_PATH=/usr/bin/chromium-browser) → 29/29 browser tests pass
+- Archive deselection fix confirmed by curation test "archiving a pack hides it from the default list"
+
+## Where work stopped
+Clean boundary. Tabbed layout is complete and all tests pass.
+
+## Next recommended slice
+B-TABS-HEADER: Add an "Export/Sync" dropdown button in the always-visible header to group the three export actions (Copy as Issue, Task Packet, PR Description) into a single menu — reducing button count in the header action bar while keeping them discoverable.
+
+## What was completed (continued)
+
+### B-TABS-HEADER — Export dropdown in action bar ✅
+- `frontend/src/components/ActionButtons.tsx` updated:
+  - Three flat export buttons (`exportBtn`, `taskPacketBtn`, `prDescBtn`) consolidated into a single `📤 Export ▾` dropdown trigger (`#exportDropdownBtn`)
+  - Dropdown panel is **always rendered in the DOM** (CSS-only show/hide via `max-height`/`opacity`/`pointer-events`), so all three button IDs remain findable by Playwright even when collapsed
+  - `exportOpen` state + `exportRef` with `mousedown` click-outside listener to close on focus loss
+  - Each export action closes the dropdown after invocation
+  - `tabIndex` toggled: 0 when open, -1 when closed (keyboard accessibility)
+  - Transition: `max-height 0.18s var(--ease-out), opacity 0.18s var(--ease-out)` (consistent easing)
+  - Trigger icon: `📤 Export` (not ambiguous upward arrow)
+- No test changes required — existing `toBeEnabled()` assertions in `workflow.spec.ts:143-145` still pass because `toBeEnabled()` checks the `disabled` attribute, not element visibility
+
+## What was verified
+- `cd frontend && npm run build` → passes (tsc + vite, 0 errors)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 29/29 browser tests pass (unchanged)
+- CodeQL — 0 alerts
+
+## Where work stopped
+Clean boundary. Export dropdown is complete with no regressions.
+
+## Next recommended slice
+B-SIDEBAR-SMART: "Smart Folders" in sidebar — group packs into labeled sections: "Ready for Review" (approved, no policy warnings), "High Drift Detected" (drift-detected status), "Starred". Currently the sidebar is a flat chronological list. This would make navigation faster for users managing many packs.
+
+### B-SIDEBAR-SMART — Smart folder filter pills in sidebar ✅
+- `frontend/src/components/Sidebar.tsx` updated:
+  - Added `SidebarFilter` type (`'all' | 'starred' | 'flagged' | 'ready' | 'in-progress'`)
+  - Added `FILTER_DEFS` constant and `matchesFilter()` pure helper
+  - Added `activeFilter` state (default: `'all'`)
+  - `filterCounts`: per-filter pack counts computed from `visiblePacks` for badge display
+  - Filtering pipeline merged into single `.filter()` call: archive → smart filter → search
+  - Filter pill row (`#sidebarFilters`, pills: `#sidebarFilter-{id}`) only rendered when `visiblePacks.length > 0`; non-All pills hidden when their count is 0
+  - Empty-state message updated to explain active filter context ("No packs in this group.")
+- `tests/browser/sidebar-smart.spec.ts` — 4 new browser tests:
+  1. Pills not in DOM when store empty; appear after adding packs
+  2. Starred filter shows only starred packs; All restores full list
+  3. Active (in-progress) filter shows only in-progress packs
+  4. Ready (approved) filter shows only approved packs
+
+## What was verified
+- `cd frontend && npm run build` → 0 errors (tsc + vite)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 33/33 browser tests pass (29 existing + 4 new)
+
+## Where work stopped
+Clean boundary. Smart folder filter pills complete.
+
+## Next recommended slice
+B-EXPORT-HISTORY: Add an "Export All as JSON" button to the sidebar (or header) that downloads the full list of packs as a JSON file. Useful for backup and external tooling. No new API needed — the list endpoint already exists; just a small UI addition.
+
+### B-EXPORT-HISTORY — Export all packs as JSON ✅
+- `frontend/src/components/Sidebar.tsx` updated:
+  - Added `downloadAllPacks(packs)` pure helper: serialises all packs to pretty-printed JSON, creates a `Blob`, triggers download via `<a download>` click, revokes the object URL
+  - Sidebar header: count badge + `#exportAllJsonBtn` button (only rendered when `packs.length > 0`)
+  - Filename: `ghostrail-packs-YYYY-MM-DD.json`
+  - Downloads the full `packs` prop (all packs including archived), not just the filtered view
+- `tests/browser/export-json.spec.ts` — 3 new browser tests:
+  1. Button absent when store is empty
+  2. Button appears once packs exist
+  3. Clicking button triggers a download; filename matches `ghostrail-packs-YYYY-MM-DD.json`; content is valid JSON array containing the saved pack
+
+## What was verified
+- `cd frontend && npm run build` → 0 errors (tsc + vite)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 36/36 browser tests pass (33 existing + 3 new)
+
+## Where work stopped
+Clean boundary. Export all packs as JSON complete.
+
+## Next recommended slice
+B-CLARIFYING-QUESTIONS: Pre-generation clarifying questions flow (Idea 3 from roadmap). Before generating, the server returns 1-3 short clarifying questions about the goal; the user answers them in the UI; answers are included in the generation context. Server-side: extend `POST /api/intent-packs/generate` to accept an optional `answers?: string[]` in the request body; if absent and heuristic mode, return `{ clarifyingQuestions: string[] }` instead of generating. UI: show question prompts + input fields before the Generate button.

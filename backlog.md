@@ -160,6 +160,33 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Verification: browser test for history tab
 - **Status**: ✅ Done (see B-HISTORY-UI in Done section)
 
+### B-TABS-HEADER — Export/Sync dropdown in detail card header
+- Value: Reduce action bar clutter — consolidate "Copy as Issue", "Copy Task Packet", "Copy PR Description" into a single "Export ▾" dropdown, following the Action Hub design recommendation
+- Scope: `frontend/src/components/ActionButtons.tsx` only; no server changes
+- Risk: low — all export buttons retain their IDs inside the dropdown; no test changes needed if IDs are preserved
+- Verification: existing action button browser tests should still pass
+- **Status**: ✅ Done (see B-TABS-HEADER in Done section)
+
+### B-SIDEBAR-SMART — Smart folder grouping in sidebar
+- Value: Make navigation faster for users managing many packs — group into labeled sections: "Starred", "Policy Flagged" (unacknowledged warnings), "Ready" (approved), "In Progress", and "All"
+- Scope: `frontend/src/components/Sidebar.tsx` only; no server changes
+- Risk: low — sidebar filter/search logic already exists; this adds grouping on top
+- Verification: existing sidebar search and archive toggle tests should still pass
+- **Status**: ✅ Done (see B-SIDEBAR-SMART in Done section)
+
+### B-EXPORT-HISTORY — Export all packs as JSON
+- Value: One-click backup and external tooling integration — downloads all packs as a single JSON file
+- Scope: Small UI addition in sidebar header; uses existing `GET /api/intent-packs` endpoint; no server changes
+- Risk: low — read-only operation using an existing API
+- Verification: browser test that clicking "Export JSON" downloads a file containing the saved packs
+- **Status**: ✅ Done (see B-EXPORT-HISTORY in Done section)
+
+### B-CLARIFYING-QUESTIONS — Pre-generation clarifying questions
+- Value: Before generating a pack, surface 1–3 short questions about the goal (ambiguity, scope, constraints) so the generated pack is more precise. Closes the loop on Idea 3 from the roadmap (LLM clarifying questions were listed but the pre-generation question flow was never built).
+- Scope: Server — extend `POST /api/intent-packs/generate`; if no `answers` in body, return `{ clarifyingQuestions: string[] }` instead of generating. UI — show question prompts + text inputs; re-submit with answers.
+- Risk: medium — changes the generation flow; existing direct-generate tests must still work (with empty answers or skip flag)
+- Verification: unit tests for question generation; integration test for answers-included generation; browser test for question UI
+
 ## In progress
 Move an item here only if a single active slice is currently being worked.
 
@@ -169,6 +196,14 @@ Move an item here if it needs user/product input.
 (No items currently blocked — all items requiring external credentials have been implemented with env-var activation.)
 
 ## Done
+
+### B-SIDEBAR-SMART — Smart folder filter pills in sidebar
+- Completed: `SidebarFilter` type, `FILTER_DEFS`, `matchesFilter()` pure helper; `activeFilter` state; filter pill row `#sidebarFilters` (only shown when packs exist); per-filter `#sidebarFilter-{id}` buttons; non-All pills hidden when count=0; empty-state message updated. 4 new browser tests. 296/296 unit + 33/33 browser tests pass.
+
+- Completed: `📤 Export ▾` dropdown trigger (`#exportDropdownBtn`); three buttons (`#exportBtn`, `#taskPacketBtn`, `#prDescBtn`) always in DOM (CSS-only show/hide); click-outside close via `mousedown` listener; `tabIndex` toggle for accessibility. 296/296 unit + 29/29 browser tests pass (no test changes required).
+
+### B-TABS — Three-mode tabbed detail view
+- Completed: `frontend/src/components/DetailTabs.tsx` (Design / Audit / Sync tab bar); `frontend/src/App.tsx` restructured with Design=default (goal/policy/constraints), Audit (health/drift/history), Sync (GitHub issue). Archive deselection bug fixed. Browser tests updated. 296/296 unit tests + 29/29 browser tests pass.
 
 ### B-GH-LIVE — Live GitHub issue creation
 - Completed: `src/core/githubClient.ts`; `POST /api/intent-packs/:id/create-github-issue` route; `githubIssueUrl` field on `StoredIntentPack`; "Create GitHub Issue" section in UI with owner/repo inputs and issue link display. Activate with `GITHUB_TOKEN` env var or per-request token. 269/269 unit tests + 25/25 browser tests pass.

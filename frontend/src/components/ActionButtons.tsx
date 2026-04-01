@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { deletePack, updatePack, exportIssueMarkdown, duplicatePack, fetchTaskPacket, fetchPrDescription } from '../api';
 import type { IntentPack } from '../types';
 
@@ -13,8 +13,23 @@ export function ActionButtons({
 }) {
   const [exportStatus, setExportStatus] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // Close the export dropdown when clicking outside of it
+  useEffect(() => {
+    if (!exportOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [exportOpen]);
 
   const handleExport = async () => {
+    setExportOpen(false);
     setExportStatus('');
     try {
       const md = await exportIssueMarkdown(pack.id);
@@ -27,6 +42,7 @@ export function ActionButtons({
   };
 
   const handleTaskPacket = async () => {
+    setExportOpen(false);
     setExportStatus('');
     try {
       const data = await fetchTaskPacket(pack.id);
@@ -39,6 +55,7 @@ export function ActionButtons({
   };
 
   const handlePrDesc = async () => {
+    setExportOpen(false);
     setExportStatus('');
     try {
       const data = await fetchPrDescription(pack.id);
@@ -71,15 +88,70 @@ export function ActionButtons({
   return (
     <div>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button id="exportBtn" className="btn btn-ghost" onClick={handleExport}>
-          📋 Copy as Issue
-        </button>
-        <button id="taskPacketBtn" className="btn btn-ghost" onClick={handleTaskPacket}>
-          📦 Task Packet
-        </button>
-        <button id="prDescBtn" className="btn btn-ghost" onClick={handlePrDesc}>
-          📝 PR Description
-        </button>
+
+        {/* ── Export dropdown ─────────────────────────────────── */}
+        <div ref={exportRef} style={{ position: 'relative' }}>
+          <button
+            id="exportDropdownBtn"
+            className="btn btn-ghost"
+            onClick={() => setExportOpen(o => !o)}
+          >
+            📤 Export {exportOpen ? '▲' : '▾'}
+          </button>
+
+          {/* Panel is always in the DOM so IDs remain reachable for tests.
+              Visibility is controlled purely via CSS properties. */}
+          <div style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            zIndex: 20,
+            background: 'var(--bg-card)',
+            border: `1px solid ${exportOpen ? 'var(--border-hover)' : 'var(--border)'}`,
+            borderRadius: 'var(--r-md)',
+            overflow: 'hidden',
+            maxHeight: exportOpen ? '200px' : '0',
+            opacity: exportOpen ? 1 : 0,
+            pointerEvents: exportOpen ? 'auto' : 'none',
+            transition: 'max-height 0.18s var(--ease-out), opacity 0.18s var(--ease-out)',
+            minWidth: '190px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            padding: exportOpen ? '4px' : '0',
+            backdropFilter: 'blur(8px)',
+            boxShadow: 'var(--shadow-md)',
+          }}>
+            <button
+              id="exportBtn"
+              className="btn btn-ghost"
+              onClick={handleExport}
+              style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              tabIndex={exportOpen ? 0 : -1}
+            >
+              📋 Copy as Issue
+            </button>
+            <button
+              id="taskPacketBtn"
+              className="btn btn-ghost"
+              onClick={handleTaskPacket}
+              style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              tabIndex={exportOpen ? 0 : -1}
+            >
+              📦 Task Packet
+            </button>
+            <button
+              id="prDescBtn"
+              className="btn btn-ghost"
+              onClick={handlePrDesc}
+              style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              tabIndex={exportOpen ? 0 : -1}
+            >
+              📝 PR Description
+            </button>
+          </div>
+        </div>
+
         <button id="rerunBtn" className="btn btn-ghost" onClick={() => onRerun?.()}>
           ↻ Re-run
         </button>
