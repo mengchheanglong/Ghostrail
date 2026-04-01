@@ -629,3 +629,29 @@ Clean boundary. Export dropdown is complete with no regressions.
 
 ## Next recommended slice
 B-SIDEBAR-SMART: "Smart Folders" in sidebar — group packs into labeled sections: "Ready for Review" (approved, no policy warnings), "High Drift Detected" (drift-detected status), "Starred". Currently the sidebar is a flat chronological list. This would make navigation faster for users managing many packs.
+
+### B-SIDEBAR-SMART — Smart folder filter pills in sidebar ✅
+- `frontend/src/components/Sidebar.tsx` updated:
+  - Added `SidebarFilter` type (`'all' | 'starred' | 'flagged' | 'ready' | 'in-progress'`)
+  - Added `FILTER_DEFS` constant and `matchesFilter()` pure helper
+  - Added `activeFilter` state (default: `'all'`)
+  - `filterCounts`: per-filter pack counts computed from `visiblePacks` for badge display
+  - Filtering pipeline merged into single `.filter()` call: archive → smart filter → search
+  - Filter pill row (`#sidebarFilters`, pills: `#sidebarFilter-{id}`) only rendered when `visiblePacks.length > 0`; non-All pills hidden when their count is 0
+  - Empty-state message updated to explain active filter context ("No packs in this group.")
+- `tests/browser/sidebar-smart.spec.ts` — 4 new browser tests:
+  1. Pills not in DOM when store empty; appear after adding packs
+  2. Starred filter shows only starred packs; All restores full list
+  3. Active (in-progress) filter shows only in-progress packs
+  4. Ready (approved) filter shows only approved packs
+
+## What was verified
+- `cd frontend && npm run build` → 0 errors (tsc + vite)
+- `node --test dist/**/*.test.js` → 296/296 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 33/33 browser tests pass (29 existing + 4 new)
+
+## Where work stopped
+Clean boundary. Smart folder filter pills complete.
+
+## Next recommended slice
+B-EXPORT-HISTORY: Add an "Export All as JSON" button to the sidebar (or header) that downloads the full list of packs as a JSON file. Useful for backup and external tooling. No new API needed — the list endpoint already exists; just a small UI addition.

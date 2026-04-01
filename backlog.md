@@ -172,6 +172,13 @@ Ghostrail is now a full **Intent Guardrail System**. The following 10 ideas form
 - Scope: `frontend/src/components/Sidebar.tsx` only; no server changes
 - Risk: low — sidebar filter/search logic already exists; this adds grouping on top
 - Verification: existing sidebar search and archive toggle tests should still pass
+- **Status**: ✅ Done (see B-SIDEBAR-SMART in Done section)
+
+### B-EXPORT-HISTORY — Export all packs as JSON
+- Value: One-click backup and external tooling integration — downloads all packs as a single JSON file
+- Scope: Small UI addition in sidebar header; uses existing `GET /api/intent-packs` endpoint; no server changes
+- Risk: low — read-only operation using an existing API
+- Verification: browser test that clicking "Export JSON" downloads a file containing the saved packs
 
 ## In progress
 Move an item here only if a single active slice is currently being worked.
@@ -183,7 +190,9 @@ Move an item here if it needs user/product input.
 
 ## Done
 
-### B-TABS-HEADER — Export dropdown in action bar
+### B-SIDEBAR-SMART — Smart folder filter pills in sidebar
+- Completed: `SidebarFilter` type, `FILTER_DEFS`, `matchesFilter()` pure helper; `activeFilter` state; filter pill row `#sidebarFilters` (only shown when packs exist); per-filter `#sidebarFilter-{id}` buttons; non-All pills hidden when count=0; empty-state message updated. 4 new browser tests. 296/296 unit + 33/33 browser tests pass.
+
 - Completed: `📤 Export ▾` dropdown trigger (`#exportDropdownBtn`); three buttons (`#exportBtn`, `#taskPacketBtn`, `#prDescBtn`) always in DOM (CSS-only show/hide); click-outside close via `mousedown` listener; `tabIndex` toggle for accessibility. 296/296 unit + 29/29 browser tests pass (no test changes required).
 
 ### B-TABS — Three-mode tabbed detail view
