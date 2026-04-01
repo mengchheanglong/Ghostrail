@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
 import { fetchHistory } from '../api';
+import { relativeTime } from '../lib/relativeTime';
+
+/** Convert a camelCase or snake_case field name to a readable Title Case label. */
+function formatFieldName(field: string): string {
+  return field
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/_/g, ' ')
+    .replace(/^./, c => c.toUpperCase())
+    .trim();
+}
 
 export function VersionHistory({ packId }: { packId: string }) {
   const [history, setHistory]     = useState<any[]>([]);
@@ -41,12 +51,13 @@ export function VersionHistory({ packId }: { packId: string }) {
               border: '1px solid var(--border)',
               borderRadius: 'var(--r-md)',
             }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', marginBottom: '6px' }}>
-                {new Date(entry.patchedAt).toLocaleString()}
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', marginBottom: '6px' }}
+                   title={new Date(entry.patchedAt).toLocaleString()}>
+                {relativeTime(entry.patchedAt)}
               </div>
               {entry.before && Object.entries(entry.before).map(([field, oldVal]) => (
                 <div key={field} style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '3px' }}>
-                  <span style={{ color: 'var(--text-faint)', textTransform: 'capitalize' }}>{field}:</span>{' '}
+                  <span style={{ color: 'var(--text-faint)' }}>{formatFieldName(field)}:</span>{' '}
                   <span style={{ color: 'var(--red)', textDecoration: 'line-through' }}>{String(oldVal)}</span>
                 </div>
               ))}

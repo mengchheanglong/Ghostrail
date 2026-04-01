@@ -95,6 +95,7 @@ export function ActionButtons({
             id="exportDropdownBtn"
             className="btn btn-ghost"
             onClick={() => setExportOpen(o => !o)}
+            title="Export this pack as a GitHub issue, task packet, or PR description"
           >
             📤 Export {exportOpen ? '▲' : '▾'}
           </button>
@@ -152,21 +153,21 @@ export function ActionButtons({
           </div>
         </div>
 
-        <button id="rerunBtn" className="btn btn-ghost" onClick={() => onRerun?.()}>
+        <button id="rerunBtn" className="btn btn-ghost" onClick={() => onRerun?.()} title="Pre-fill the generator form with this pack's goal and context">
           ↻ Re-run
         </button>
-        <button id="duplicateBtn" className="btn btn-ghost" onClick={handleDuplicate}>
+        <button id="duplicateBtn" className="btn btn-ghost" onClick={handleDuplicate} title="Create a copy of this intent pack">
           ⧉ Duplicate
         </button>
-        <button id="starBtn" className="btn btn-warning" onClick={toggleStar}>
+        <button id="starBtn" className="btn btn-warning" onClick={toggleStar} title={pack.starred ? 'Remove star' : 'Star this pack for quick access'}>
           {pack.starred ? '★ Unstar' : '☆ Star'}
         </button>
-        <button id="archiveBtn" className="btn btn-ghost" onClick={toggleArchive}>
+        <button id="archiveBtn" className="btn btn-ghost" onClick={toggleArchive} title={pack.archived ? 'Restore this pack from the archive' : 'Archive this pack (hide from default list)'}>
           {pack.archived ? '↩ Unarchive' : '⊙ Archive'}
         </button>
 
         {/* Delete with inline confirmation */}
-        <button id="deleteBtn" className="btn btn-danger" onClick={handleDelete}>
+        <button id="deleteBtn" className="btn btn-danger" onClick={handleDelete} title="Delete this pack permanently">
           {deleteConfirm ? '⚠ Confirm delete?' : 'Delete'}
         </button>
         {deleteConfirm && (
