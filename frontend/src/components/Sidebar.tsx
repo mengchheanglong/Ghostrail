@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { relativeTime } from '../lib/relativeTime';
 import type { IntentPack } from '../types';
 
 const STATUS_META: Record<string, { label: string; badge: string }> = {
@@ -238,6 +239,12 @@ export function Sidebar({
                     {pack.policyWarnings && pack.policyWarnings.length > 0 && !acknowledgedPacks?.has(pack.id) && (
                       <span className="policy-warning-indicator" title="Unacknowledged policy warnings" style={{ color: 'var(--amber)', fontSize: '0.75rem' }}>⚠</span>
                     )}
+                    <span
+                      style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--text-faint)', whiteSpace: 'nowrap' }}
+                      title={new Date(pack.createdAt).toLocaleString()}
+                    >
+                      {relativeTime(pack.createdAt)}
+                    </span>
                   </div>
                 </motion.li>
               );

@@ -704,3 +704,35 @@ Clean boundary. UX readability improvements complete.
 
 ## Next recommended slice
 B-CLARIFYING-QUESTIONS: Pre-generation clarifying questions flow (Idea 3 from roadmap). Before generating, the server returns 1-3 short clarifying questions about the goal; the user answers them in the UI; answers are included in the generation context. Server-side: extend `POST /api/intent-packs/generate` to accept an optional `answers?: string[]` in the request body; if absent and heuristic mode, return `{ clarifyingQuestions: string[] }` instead of generating. UI: show question prompts + input fields before the Generate button.
+
+## What was completed (continued)
+
+### B-UX-2 — Relative timestamps, field label improvements, and action button tooltips ✅
+- New `frontend/src/lib/relativeTime.ts`:
+  - Pure helper `relativeTime(iso)` — converts ISO timestamp to "just now", "5m ago", "3h ago", "2d ago", "1mo ago", "2y ago"
+  - Returns the raw string if the input is an invalid date (NaN guard)
+  - 30-day month approximation, documented in JSDoc
+- `frontend/src/App.tsx`:
+  - Detail card header now shows relative time (e.g. "3h ago") instead of a full locale date string
+  - Full date is still accessible via native `title` tooltip on hover
+- `frontend/src/components/Sidebar.tsx`:
+  - Each sidebar item's badge row now includes a right-aligned relative creation time with full date tooltip
+  - Helps users quickly identify which packs are new vs. old without opening them
+- `frontend/src/components/VersionHistory.tsx`:
+  - History entry timestamps switched from full locale strings to relative time (with full date as tooltip)
+  - Added `formatFieldName()` helper — converts camelCase field names to readable labels (e.g. "repositoryContext" → "Repository Context")
+- `frontend/src/components/ActionButtons.tsx`:
+  - Added `title` tooltip attributes to all action buttons: Export dropdown, Re-run, Duplicate, Star/Unstar, Archive/Unarchive, Delete
+  - Tooltips clarify button intent on hover, reducing ambiguity for new users
+
+## What was verified
+- `cd frontend && npm run build` → 0 errors (tsc + vite)
+- `node --test dist/**/*.test.js` → 311/311 unit + integration tests pass (unchanged)
+- `CHROME_PATH=/usr/bin/chromium-browser npx playwright test` → 41/41 browser tests pass (unchanged — no test IDs or text strings changed)
+- CodeQL → 0 alerts
+
+## Where work stopped
+Clean boundary. B-UX-2 complete.
+
+## Next recommended slice
+B-CLARIFYING-QUESTIONS: Pre-generation clarifying questions flow (Idea 3 from roadmap — already in backlog). The server flow and UI form are already partially built in `GeneratorForm.tsx`; verify if the server side was shipped and complete the loop.

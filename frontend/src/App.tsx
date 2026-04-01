@@ -13,6 +13,7 @@ import { PackDetailList } from './components/PackDetailList';
 import { DetailTabs } from './components/DetailTabs';
 import type { DetailTab } from './components/DetailTabs';
 import { fetchPacks, updatePack } from './api';
+import { relativeTime } from './lib/relativeTime';
 import type { IntentPack } from './types';
 
 function App() {
@@ -141,7 +142,9 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '0.75rem', color: 'var(--text-faint)', marginBottom: '8px' }}>
                   <span>ID: <code style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{selectedPack.id}</code></span>
                   <span>·</span>
-                  <span>{new Date(selectedPack.createdAt).toLocaleString()}</span>
+                  <span title={new Date(selectedPack.createdAt).toLocaleString()}>
+                    {relativeTime(selectedPack.createdAt)}
+                  </span>
                 </div>
 
                 <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-faint)', margin: '0 0 4px' }}>
