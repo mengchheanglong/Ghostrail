@@ -129,7 +129,7 @@ test("generating from an empty store creates a pack and renders all detail secti
     // ── Confidence and reasoning mode badges ────────────────
     // Long goal with constraint language → "high" confidence from heuristic scorer
     await expect(page.locator("#detailContent")).toContainText("confidence");
-    await expect(page.locator("#detailContent")).toContainText("heuristic");
+    await expect(page.locator("#detailContent")).toContainText("Rule-based");
 
     // ── Status row ───────────────────────────────────────────
     await expect(page.locator("#statusRow")).toBeVisible();
@@ -140,11 +140,17 @@ test("generating from an empty store creates a pack and renders all detail secti
     await expect(page.locator("#tagsSection")).toBeVisible();
 
     // ── Action buttons are enabled ───────────────────────────
+    // Export dropdown items are always in DOM (CSS-only show/hide)
     await expect(page.locator("#exportBtn")).toBeEnabled();
     await expect(page.locator("#taskPacketBtn")).toBeEnabled();
     await expect(page.locator("#prDescBtn")).toBeEnabled();
+    // Secondary actions are in the More overflow menu
+    await page.click("#moreActionsBtn");
     await expect(page.locator("#duplicateBtn")).toBeEnabled();
     await expect(page.locator("#deleteBtn")).toBeEnabled();
+    // Close the menu
+    await page.keyboard.press("Escape");
+    await page.click("#detailCard");
 
     // ── Drift, health, and history sections are in the Audit tab
     await page.click("#tab-audit");

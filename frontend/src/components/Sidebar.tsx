@@ -14,12 +14,18 @@ const STATUS_META: Record<string, { label: string; badge: string }> = {
 
 type SidebarFilter = 'all' | 'starred' | 'flagged' | 'ready' | 'in-progress';
 
+const CONFIDENCE_LABELS: Record<string, string> = {
+  high:   'High confidence',
+  medium: 'Medium confidence',
+  low:    'Low confidence',
+};
+
 const FILTER_DEFS: { id: SidebarFilter; label: string }[] = [
-  { id: 'all',          label: 'All'         },
-  { id: 'starred',      label: '⭐ Starred'   },
-  { id: 'flagged',      label: '⚠ Flagged'   },
-  { id: 'ready',        label: '✓ Ready'     },
-  { id: 'in-progress',  label: '▶ Active'    },
+  { id: 'all',          label: 'All'          },
+  { id: 'starred',      label: 'Starred'      },
+  { id: 'flagged',      label: 'Has Warnings' },
+  { id: 'ready',        label: 'Ready to Use' },
+  { id: 'in-progress',  label: 'In Progress'  },
 ];
 
 function downloadAllPacks(packs: IntentPack[]): void {
@@ -44,7 +50,7 @@ function matchesFilter(pack: IntentPack, filter: SidebarFilter, acknowledgedPack
 }
 
 export function Sidebar({
-  packs, isLoading, error, selectedId, onSelect, showArchived, onToggleArchived, acknowledgedPacks,
+  packs, isLoading, error, selectedId, onSelect, showArchived, onToggleArchived, acknowledgedPacks, onRetry,
 }: {
   packs: IntentPack[];
   isLoading: boolean;
@@ -54,6 +60,7 @@ export function Sidebar({
   showArchived?: boolean;
   onToggleArchived?: () => void;
   acknowledgedPacks?: Set<string>;
+  onRetry?: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<SidebarFilter>('all');
@@ -167,15 +174,48 @@ export function Sidebar({
             <span className="muted" style={{ fontSize: '0.85rem' }}>Loading…</span>
           </div>
         )}
-        {error && <div className="alert alert-error" style={{ marginBottom: '8px' }}>{error}</div>}
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: '8px' }}>
+            {error}
+            {onRetry && (
+              <button
+                className="btn btn-ghost"
+                onClick={onRetry}
+                style={{ marginLeft: '8px', fontSize: '0.75rem', padding: '3px 10px' }}
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
         {!isLoading && !error && filtered.length === 0 && (
-          <p id="packListState" className="muted" style={{ fontSize: '0.82rem', textAlign: 'center', padding: '16px 0' }}>
-            {search
-              ? 'No packs match your search.'
-              : activeFilter !== 'all'
-                ? 'No packs in this group.'
-                : 'No saved packs yet'}
-          </p>
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <p id="packListState" className="muted" style={{ fontSize: '0.82rem', margin: '0 0 8px' }}>
+              {search
+                ? 'No packs match your search.'
+                : activeFilter !== 'all'
+                  ? 'No packs in this group.'
+                  : 'No saved packs yet'}
+            </p>
+            {search && (
+              <button
+                className="btn btn-ghost"
+                onClick={() => setSearch('')}
+                style={{ fontSize: '0.75rem', padding: '4px 12px' }}
+              >
+                Clear search
+              </button>
+            )}
+            {!search && activeFilter !== 'all' && (
+              <button
+                className="btn btn-ghost"
+                onClick={() => setActiveFilter('all')}
+                style={{ fontSize: '0.75rem', padding: '4px 12px' }}
+              >
+                Show all packs
+              </button>
+            )}
+          </div>
         )}
 
         <ul id="packList" style={{ listStyle: 'none', padding: 0, margin: 0, display: filtered.length > 0 ? 'flex' : 'none', flexDirection: 'column', gap: '6px' }}>
@@ -231,7 +271,7 @@ export function Sidebar({
                   {/* Badges */}
                   <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <span className={`badge ${pack.confidence === 'high' ? 'badge-green' : pack.confidence === 'medium' ? 'badge-amber' : 'badge-red'}`}>
-                      {pack.confidence}
+                      {CONFIDENCE_LABELS[pack.confidence] ?? pack.confidence}
                     </span>
                     <span className={`badge ${statusMeta.badge}`}>{statusMeta.label}</span>
                     {pack.starred && <span className="star-indicator" title="Starred" style={{ fontSize: '0.75rem' }}>★</span>}

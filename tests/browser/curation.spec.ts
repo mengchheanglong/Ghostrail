@@ -48,17 +48,19 @@ test("star button toggles label and shows ★ indicator in sidebar", async ({ pa
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
-    // Initial state: button says "☆ Star"
+    // Initial state: button says "☆ Star" (open More menu first)
+    await page.click("#moreActionsBtn");
     await expect(page.locator("#starBtn")).toHaveText("☆ Star");
 
-    // Click star
+    // Click star — menu closes after action
     await page.click("#starBtn");
 
-    // Button label should update to indicate starred
-    await expect(page.locator("#starBtn")).toHaveText("★ Unstar");
-
     // ★ indicator should appear in the sidebar list item
-    await expect(page.locator(".pack-item .star-indicator")).toBeVisible();
+    await expect(page.locator(".pack-item .star-indicator")).toBeVisible({ timeout: 5_000 });
+
+    // Re-open More menu to verify button label updated
+    await page.click("#moreActionsBtn");
+    await expect(page.locator("#starBtn")).toHaveText("★ Unstar");
   } finally {
     await srv.close();
   }
@@ -78,7 +80,8 @@ test("archiving a pack hides it from the default list", async ({ page }) => {
     // One pack visible initially
     await expect(page.locator(".pack-item")).toHaveCount(1);
 
-    // Archive the pack
+    // Archive the pack (open More menu first)
+    await page.click("#moreActionsBtn");
     await page.click("#archiveBtn");
 
     // With "Show archived" off (default), pack disappears from list
@@ -100,7 +103,8 @@ test("show archived toggle reveals archived packs", async ({ page }) => {
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
-    // Archive the pack via the UI
+    // Archive the pack via the UI (open More menu first)
+    await page.click("#moreActionsBtn");
     await page.click("#archiveBtn");
     await expect(page.locator(".pack-item")).toHaveCount(0, { timeout: 5_000 });
 

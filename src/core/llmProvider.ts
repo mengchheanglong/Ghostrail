@@ -5,6 +5,7 @@
  *   - HeuristicProvider — wraps the existing rule-based generateIntentPack()
  *   - StubLlmProvider   — deterministic credential-free stub for integration tests
  *   - OpenAiProvider    — real OpenAI chat completions call; requires OPENAI_API_KEY
+ *   - GroqProvider      — Groq chat completions (openai/gpt-oss-120b); requires GROQ_API_KEY
  *
  * Wire a real provider via createProvider() and inject into createHandler().
  * The server auto-selects OpenAiProvider when OPENAI_API_KEY is set.
@@ -32,7 +33,8 @@ export interface LlmProvider {
 export type LlmProviderConfig =
   | { type: "heuristic" }
   | { type: "stub" }
-  | { type: "openai"; apiKey: string; model?: string };
+  | { type: "openai"; apiKey: string; model?: string }
+  | { type: "groq"; apiKey: string; model?: string; maxCompletionTokens?: number };
 
 // ── Heuristic provider ────────────────────────────────────────────────────────
 
@@ -195,6 +197,102 @@ export class OpenAiProvider implements LlmProvider {
   }
 }
 
+// ── Groq provider ─────────────────────────────────────────────────────────────
+
+/**
+ * Calls the Groq chat completions API (OpenAI-compatible endpoint).
+ * Default model: openai/gpt-oss-120b
+ *
+ * - apiKey: Groq API key (set GROQ_API_KEY in your environment)
+ * - model: defaults to "openai/gpt-oss-120b"
+ * - fetchFn: injectable for testing; defaults to globalThis.fetch
+ */
+export class GroqProvider implements LlmProvider {
+  private apiKey: string;
+  private model: string;
+  private fetchFn: typeof fetch;
+  private maxCompletionTokens: number;
+
+  private static readonly DEFAULT_MAX_COMPLETION_TOKENS = 1024;
+  private static readonly HARD_MAX_COMPLETION_TOKENS = 7900;
+
+  private static normalizeMaxCompletionTokens(value: number): number {
+    if (!Number.isFinite(value) || value <= 0) {
+      return GroqProvider.DEFAULT_MAX_COMPLETION_TOKENS;
+    }
+    const rounded = Math.floor(value);
+    return Math.min(rounded, GroqProvider.HARD_MAX_COMPLETION_TOKENS);
+  }
+
+  constructor(
+    apiKey: string,
+    model = "openai/gpt-oss-120b",
+    fetchFn: typeof fetch = globalThis.fetch,
+    maxCompletionTokens = GroqProvider.DEFAULT_MAX_COMPLETION_TOKENS,
+  ) {
+    this.apiKey = apiKey;
+    this.model = model;
+    this.fetchFn = fetchFn;
+    this.maxCompletionTokens = GroqProvider.normalizeMaxCompletionTokens(maxCompletionTokens);
+  }
+
+  async generate(input: IntentPackInput): Promise<IntentPack> {
+    const userMessage = input.repositoryContext?.trim()
+      ? `Goal: ${input.goal.trim()}\n\nRepository context: ${input.repositoryContext.trim()}`
+      : `Goal: ${input.goal.trim()}`;
+
+    const response = await this.fetchFn("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          { role: "system", content: OPENAI_SYSTEM_PROMPT },
+          { role: "user", content: userMessage },
+        ],
+        temperature: 1,
+        max_completion_tokens: this.maxCompletionTokens,
+        top_p: 1,
+        reasoning_effort: "medium",
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+    }
+
+    const data = await response.json() as OpenAiChatResponse;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("Groq response missing content");
+    }
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(content) as Record<string, unknown>;
+    } catch {
+      throw new Error(`Groq returned non-JSON content: ${content.slice(0, 200)}`);
+    }
+
+    return {
+      objective: ensureString(parsed["objective"], "objective"),
+      nonGoals: ensureStringArray(parsed["nonGoals"], "nonGoals"),
+      constraints: ensureStringArray(parsed["constraints"], "constraints"),
+      acceptanceCriteria: ensureStringArray(parsed["acceptanceCriteria"], "acceptanceCriteria"),
+      touchedAreas: ensureStringArray(parsed["touchedAreas"], "touchedAreas"),
+      risks: ensureStringArray(parsed["risks"], "risks"),
+      openQuestions: ensureStringArray(parsed["openQuestions"], "openQuestions"),
+      confidence: ensureConfidence(parsed["confidence"]),
+      reasoningMode: "llm",
+    };
+  }
+}
+
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 /**
@@ -209,6 +307,8 @@ export function createProvider(config: LlmProviderConfig): LlmProvider {
       return new StubLlmProvider();
     case "openai":
       return new OpenAiProvider(config.apiKey, config.model);
+    case "groq":
+      return new GroqProvider(config.apiKey, config.model, globalThis.fetch, config.maxCompletionTokens);
     default: {
       // Exhaustiveness check — compile-time guard for when new provider types are added
       const _exhaustive: never = config;

@@ -56,6 +56,8 @@ test("re-run prefills the generator form with the saved goal and context", async
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
+    // Open the More menu to access Re-run
+    await page.click("#moreActionsBtn");
     await page.click("#rerunBtn");
 
     await expect(page.locator("#goal")).toHaveValue("Rerun goal for browser test");
@@ -79,6 +81,7 @@ test("re-run then generate creates a new saved pack", async ({ page }) => {
     await expect(page.locator(".pack-item")).toHaveCount(1);
 
     // Re-run prefills the form
+    await page.click("#moreActionsBtn");
     await page.click("#rerunBtn");
     await expect(page.locator("#goal")).toHaveValue("Pack for rerun-generate test");
 
@@ -103,14 +106,15 @@ test("delete: first click shows confirm state; cancel resets it", async ({ page 
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
-    // First click — should ask for confirmation
+    // First click — should ask for confirmation (open More menu first)
+    await page.click("#moreActionsBtn");
     await page.click("#deleteBtn");
     await expect(page.locator("#deleteBtn")).toHaveText("⚠ Confirm delete?");
     await expect(page.locator("#cancelDeleteBtn")).toBeVisible();
 
     // Cancel — should reset
     await page.click("#cancelDeleteBtn");
-    await expect(page.locator("#deleteBtn")).toHaveText("Delete");
+    await expect(page.locator("#deleteBtn")).toHaveText("🗑 Delete");
     await expect(page.locator("#cancelDeleteBtn")).not.toBeVisible();
 
     // Pack should still be in the list
@@ -129,7 +133,8 @@ test("delete: confirming removes the pack from the list", async ({ page }) => {
     await page.goto(srv.url);
     await page.waitForSelector("#detailCard", { state: "visible" });
 
-    // First click — enter confirmation state
+    // First click — enter confirmation state (open More menu first)
+    await page.click("#moreActionsBtn");
     await page.click("#deleteBtn");
     await expect(page.locator("#deleteBtn")).toHaveText("⚠ Confirm delete?");
 
@@ -160,6 +165,8 @@ test("duplicate creates a new pack and selects it, leaving the original intact",
     // Get the original pack ID from the selected sidebar item
     const originalItemId = await page.locator(".pack-item.selected").getAttribute("data-id");
 
+    // Open More menu and click Duplicate
+    await page.click("#moreActionsBtn");
     await page.click("#duplicateBtn");
 
     // Two packs should now be in the list

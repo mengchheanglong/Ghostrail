@@ -1,9 +1,9 @@
 export type DetailTab = 'design' | 'audit' | 'sync';
 
 const TABS: { id: DetailTab; label: string; icon: string; desc: string; title: string }[] = [
-  { id: 'design', label: 'Design', icon: '✏',  desc: 'Goal · Constraints · Criteria', title: 'View and edit the intent pack fields: goal, context, constraints, acceptance criteria, and more' },
-  { id: 'audit',  label: 'Audit',  icon: '🔍', desc: 'Health · Drift · History',      title: 'Check pack health score, analyze diff drift, and view version history' },
-  { id: 'sync',   label: 'Sync',   icon: '🔗', desc: 'GitHub Issues',                 title: 'Create a linked GitHub issue from this intent pack' },
+  { id: 'design', label: 'Design',           icon: '✏',  desc: 'Goal · Constraints · Criteria', title: 'View and edit the pack fields: goal, context, constraints, acceptance criteria, and more' },
+  { id: 'audit',  label: 'Health & History', icon: '🔍', desc: 'Health · Drift · History',      title: 'Check pack health score, analyze diff drift, and view version history' },
+  { id: 'sync',   label: 'Publish',          icon: '🔗', desc: 'GitHub Issues',                 title: 'Create a linked GitHub issue from this pack' },
 ];
 
 export function DetailTabs({

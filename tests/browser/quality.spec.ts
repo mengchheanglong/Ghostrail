@@ -62,8 +62,8 @@ test("quality bar appears and shows Vague level for a vague goal", async ({ page
     // Bar should become visible
     await expect(page.locator("#qualityBarWrap")).toBeVisible({ timeout: 3_000 });
 
-    // Label should say Vague
-    await expect(page.locator("#qualityLabel")).toContainText("Vague");
+    // Label should say Needs more detail
+    await expect(page.locator("#qualityLabel")).toContainText("Needs more detail");
 
     // At least one suggestion should appear
     await expect(page.locator("#qualitySuggestions")).toBeVisible();
@@ -88,7 +88,7 @@ test("quality bar shows Clear level for a well-specified goal", async ({ page })
     await page.fill("#goal", clearGoal);
 
     await expect(page.locator("#qualityBarWrap")).toBeVisible({ timeout: 3_000 });
-    await expect(page.locator("#qualityLabel")).toContainText("Clear");
+    await expect(page.locator("#qualityLabel")).toContainText("Looks good");
 
     // No suggestions for a clear goal
     await expect(page.locator("#qualitySuggestions")).not.toBeVisible();

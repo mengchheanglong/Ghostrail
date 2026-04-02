@@ -1,7 +1,81 @@
 # implement.md
 
 ## Current milestone
-**Goal-shift + Foundation Milestone** — Intent Guardrail System
+**UX/UI Redesign** — Frontend-only clarity and usability improvements
+
+## What was attempted
+Improve first-run and repeat-run usability in the generator surface without changing backend behavior.
+Add a strict Groq completion-token cap below 8000 to prevent TPM 413 errors.
+Document latest AI token-limit behavior and Health & History usage in README.
+
+## What was completed
+
+### B-README-USAGE-DOCS — README usability/config docs ✅
+- Updated `README.md` with an **AI provider configuration** section describing Groq/OpenAI/heuristic selection and env vars
+- Documented `GROQ_MAX_COMPLETION_TOKENS` usage and the enforced sub-8000 safety behavior (default 1024, hard cap 7900)
+- Added a practical **Using Health & History** section with user workflow and snapshot rules
+
+### B-GROQ-TPM-CAP — Groq token cap safety ✅
+- Updated `src/core/llmProvider.ts` so `GroqProvider` uses a default `max_completion_tokens` of 1024 (instead of 8192)
+- Added a hard cap of 7900 even when higher values are configured, ensuring requests stay below 8000 completion-token limit
+- Extended Groq provider config with optional `maxCompletionTokens` and wired `GROQ_MAX_COMPLETION_TOKENS` via `src/server.ts`
+- Added unit tests in `src/llmProvider.test.ts` validating default and clamped token behavior
+
+### B-UX-DRAFT-CONTROL — Draft reset usability polish ✅
+- Added explicit "Clear draft" control to `frontend/src/components/GeneratorForm.tsx` when draft content exists
+- Clear action now resets goal/context fields and removes persisted draft keys from localStorage immediately
+- Added browser coverage in `tests/browser/usability.spec.ts` for clear-button behavior and storage cleanup
+
+### B-UX-DRAFT-PERSIST — Generator draft persistence ✅
+- Added safe localStorage draft persistence for goal/context in `frontend/src/components/GeneratorForm.tsx`
+- Restores unsent drafts automatically after refresh and shows a clear "draft restored" hint
+- Clears draft storage after successful pack generation to avoid stale prefill
+- Added browser coverage in `tests/browser/usability.spec.ts` for reload-restore and post-generate cleanup
+
+### B-UX-INPUT-ASSIST — Generator input usability polish ✅
+- Added quick-start example chips in `frontend/src/components/GeneratorForm.tsx` so users can prefill realistic goals in one click
+- Added keyboard shortcut submit support (`Ctrl+Enter` / `Cmd+Enter`) across goal, context, and clarifying answer textareas
+- Added inline shortcut guidance text to reduce friction and make the faster path discoverable
+- Added browser coverage in `tests/browser/usability.spec.ts` for example-chip prefill and keyboard-submit behavior
+
+### B-UX-POLISH — UX/UI Clarity Polish ✅
+- Added `Tooltip` to `StatusDropdown` explaining what each lifecycle status means
+- Exchanged raw confidence string values with human-readable tags in `Sidebar.tsx`
+- Improved generator 'skip' button text so it's clear it falls back to the original goal
+
+### B-UX-REDESIGN — UX/UI Redesign ✅
+- New `frontend/src/components/OnboardingBanner.tsx` — dismissible first-visit banner with localStorage persistence (`ghostrail.onboarding.dismissed`), 3-step guide, Framer Motion fade-out
+- New `frontend/src/components/Tooltip.tsx` — accessible tooltip wrapper with `role="tooltip"`, `aria-describedby`, keyboard focus support
+- `frontend/src/index.css` — 8 new CSS utility classes: `.section-separator`, `.section-label`, `.tooltip-root`, `.tooltip-overlay`, `.onboarding-banner`, `.clarifying-panel`, `.action-overflow-menu`, `.action-rerun-desktop/mobile`
+- `frontend/src/components/DetailTabs.tsx` — renamed "Audit" → "Health & History", "Sync" → "Publish" (tab IDs preserved)
+- `frontend/src/components/Sidebar.tsx` — renamed filter pills (Flagged→"Has Warnings", Ready→"Ready to Use", Active→"In Progress"), added `onRetry` prop, "Clear search" and "Show all packs" recovery buttons in empty states
+- `frontend/src/components/GeneratorForm.tsx` — section title "Generate a Pack", textarea label "What do you want to build or change?", button "Generate Pack", quality bar labels ("Needs more detail"/"Getting there"/"Looks good"), positive confirmation when clear, clarifying panel with step label + question count, `toUserMessage()` error helper, "Try again" + dismiss buttons on errors
+- `frontend/src/components/ActionButtons.tsx` — two-tier action bar: Export + Re-run as Tier 1; Duplicate/Star/Archive/Delete in "More ▾" overflow menu; Re-run moves to overflow on mobile (<900px); all button IDs preserved
+- `frontend/src/App.tsx` — header tagline "AI Guardrails for Coding Work", shield logo icon, help link, removed "Your Intent Packs" page title, OnboardingBanner integration, section separator + "Your Saved Packs" label, Tooltip on confidence/reasoning badges with human-readable labels, truncated UUID display, policy warning clarity with "What is this?" expandable section, acknowledge confirmation message
+- Browser tests updated: `tests/browser/actions.spec.ts`, `tests/browser/curation.spec.ts`, `tests/browser/quality.spec.ts`, `tests/browser/workflow.spec.ts`, `tests/browser/policy.spec.ts`
+
+## What was verified
+- Manual verification of `README.md` content and section placement (docs-only slice)
+- `npm run build` → passes (tsc, 0 errors)
+- `node --test dist/llmProvider.test.js` → 32/32 tests pass, including Groq token-cap assertions
+- `cd frontend && npm run build` → passes (tsc + vite, 0 errors)
+- `cd .. && npx playwright test tests/browser/usability.spec.ts tests/browser/clarifying.spec.ts` → 10/10 browser tests pass
+- `npm run build` → passes (tsc, 0 errors)
+- `cd .. && npx playwright test tests/browser/usability.spec.ts tests/browser/clarifying.spec.ts` → 9/9 browser tests pass
+- `npm run build` → passes (tsc, 0 errors)
+- `cd frontend && npm run build` → passes (tsc + vite, 0 errors)
+- `npx playwright test tests/browser/usability.spec.ts tests/browser/clarifying.spec.ts tests/browser/quality.spec.ts` → 10/10 browser tests pass
+- `npm run build` → passes (tsc, 0 errors)
+- `npm run build` (frontend) → passes (tsc + vite, 0 errors)
+- `npm test` → 296/296 unit + integration tests pass (unchanged)
+- `npx playwright test` → 41/41 browser tests pass (was 41 before; all updated selectors work)
+- All existing pack behaviors preserved (no backend changes)
+
+## Where work stopped
+Stopped after generator-surface usability improvements, a bounded Groq TPM safety fix (token cap below 8000), and README documentation updates. No additional backend route or detail-view behavior changes were included in this slice.
+
+## Next recommended slice
+Property-based tests (task 10 in `.kiro/specs/ux-ui-redesign/tasks.md`) — requires adding `fast-check` + React Testing Library to the frontend test setup. Low risk, high value for correctness guarantees.
 
 ## What was attempted
 Complete a "goal-shift + foundation" milestone across all 7 ordered phases:

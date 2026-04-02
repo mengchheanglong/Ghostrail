@@ -46,6 +46,50 @@ npm start
 
 Then open `http://localhost:3000`.
 
+## AI provider configuration
+
+Ghostrail supports three generation modes:
+
+- **Groq provider** (preferred when `GROQ_API_KEY` is set)
+- **OpenAI provider** (used when `OPENAI_API_KEY` is set and Groq is not set)
+- **Heuristic provider** (fallback when no AI key is configured)
+
+Set environment variables before starting the server:
+
+```bash
+# Choose one provider
+GROQ_API_KEY=your_groq_key
+# or
+OPENAI_API_KEY=your_openai_key
+
+# Optional for Groq: completion token request limit
+GROQ_MAX_COMPLETION_TOKENS=1024
+```
+
+Groq safety behavior:
+
+- Default `max_completion_tokens` is `1024`
+- Values are hard-capped to `7900`
+- This prevents requests from exceeding `8000` completion tokens and helps avoid 413 TPM/token-limit errors
+
+## Using Health & History
+
+After generating a pack:
+
+1. Select the pack in **Saved Packs**.
+2. Open the **Health & History** tab.
+3. Expand **Pack Health** to see:
+  - Overall score and level (Poor/Fair/Good/Excellent)
+  - Four quality dimensions: Objective Specificity, Acceptance Criteria, Constraint Completeness, Risk Coverage
+  - Actionable suggestions per dimension
+4. Make edits in the **Design** tab (goal/context/notes/tags/status), then return to **Health & History** to re-check the score.
+
+Version History behavior:
+
+- Snapshots are created when you update meaningful fields: `goal`, `repositoryContext`, `notes`, `tags`, or `status`
+- Star/archive toggles do not create history snapshots
+- The timeline shows when each edit happened and the previous values for changed fields
+
 ## API
 
 ### Core

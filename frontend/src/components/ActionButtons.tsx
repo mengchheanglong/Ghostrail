@@ -14,19 +14,20 @@ export function ActionButtons({
   const [exportStatus, setExportStatus] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
-  // Close the export dropdown when clicking outside of it
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    if (!exportOpen) return;
+    if (!exportOpen && !moreOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
-        setExportOpen(false);
-      }
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [exportOpen]);
+  }, [exportOpen, moreOpen]);
 
   const handleExport = async () => {
     setExportOpen(false);
@@ -34,10 +35,10 @@ export function ActionButtons({
     try {
       const md = await exportIssueMarkdown(pack.id);
       await navigator.clipboard.writeText(md);
-      setExportStatus('Copied!');
+      setExportStatus('Copied as GitHub Issue!');
       setTimeout(() => setExportStatus(''), 2500);
     } catch {
-      setExportStatus('Failed');
+      setExportStatus('Failed to copy');
     }
   };
 
@@ -50,7 +51,7 @@ export function ActionButtons({
       setExportStatus('Task packet copied!');
       setTimeout(() => setExportStatus(''), 2500);
     } catch {
-      setExportStatus('Failed');
+      setExportStatus('Failed to copy');
     }
   };
 
@@ -63,50 +64,47 @@ export function ActionButtons({
       setExportStatus('PR description copied!');
       setTimeout(() => setExportStatus(''), 2500);
     } catch {
-      setExportStatus('Failed');
+      setExportStatus('Failed to copy');
     }
   };
 
-  const toggleStar    = async () => onUpdate(await updatePack(pack.id, { starred: !pack.starred }));
-  const toggleArchive = async () => onUpdate(await updatePack(pack.id, { archived: !pack.archived }));
+  const toggleStar    = async () => { setMoreOpen(false); onUpdate(await updatePack(pack.id, { starred: !pack.starred })); };
+  const toggleArchive = async () => { setMoreOpen(false); onUpdate(await updatePack(pack.id, { archived: !pack.archived })); };
 
   const handleDelete = async () => {
-    if (!deleteConfirm) {
-      setDeleteConfirm(true);
-      return;
-    }
+    if (!deleteConfirm) { setDeleteConfirm(true); return; }
     await deletePack(pack.id);
     setDeleteConfirm(false);
+    setMoreOpen(false);
     onDelete();
   };
 
   const handleDuplicate = async () => {
+    setMoreOpen(false);
     const dup = await duplicatePack(pack.id);
     if (onDuplicate) onDuplicate(dup);
   };
 
   return (
-    <div>
+    <div style={{ position: 'relative', zIndex: 10 }}>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
 
-        {/* ── Export dropdown ─────────────────────────────────── */}
-        <div ref={exportRef} style={{ position: 'relative' }}>
+        {/* ── Tier 1: Export dropdown ── */}
+        <div ref={exportRef} style={{ position: 'relative', zIndex: 10 }}>
           <button
             id="exportDropdownBtn"
             className="btn btn-ghost"
-            onClick={() => setExportOpen(o => !o)}
+            onClick={() => { setExportOpen(o => !o); setMoreOpen(false); }}
             title="Export this pack as a GitHub issue, task packet, or PR description"
           >
             📤 Export {exportOpen ? '▲' : '▾'}
           </button>
 
-          {/* Panel is always in the DOM so IDs remain reachable for tests.
-              Visibility is controlled purely via CSS properties. */}
           <div style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
             left: 0,
-            zIndex: 20,
+            zIndex: 200,
             background: 'var(--bg-card)',
             border: `1px solid ${exportOpen ? 'var(--border-hover)' : 'var(--border)'}`,
             borderRadius: 'var(--r-md)',
@@ -115,7 +113,7 @@ export function ActionButtons({
             opacity: exportOpen ? 1 : 0,
             pointerEvents: exportOpen ? 'auto' : 'none',
             transition: 'max-height 0.18s var(--ease-out), opacity 0.18s var(--ease-out)',
-            minWidth: '190px',
+            minWidth: '200px',
             display: 'flex',
             flexDirection: 'column',
             gap: '2px',
@@ -123,58 +121,99 @@ export function ActionButtons({
             backdropFilter: 'blur(8px)',
             boxShadow: 'var(--shadow-md)',
           }}>
-            <button
-              id="exportBtn"
-              className="btn btn-ghost"
-              onClick={handleExport}
-              style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
-              tabIndex={exportOpen ? 0 : -1}
-            >
-              📋 Copy as Issue
+            <button id="exportBtn" className="btn btn-ghost" onClick={handleExport} style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }} tabIndex={exportOpen ? 0 : -1}>
+              📋 Copy as GitHub Issue
             </button>
-            <button
-              id="taskPacketBtn"
-              className="btn btn-ghost"
-              onClick={handleTaskPacket}
-              style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
-              tabIndex={exportOpen ? 0 : -1}
-            >
-              📦 Task Packet
+            <button id="taskPacketBtn" className="btn btn-ghost" onClick={handleTaskPacket} style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }} tabIndex={exportOpen ? 0 : -1}>
+              📦 Copy as Task Packet
             </button>
-            <button
-              id="prDescBtn"
-              className="btn btn-ghost"
-              onClick={handlePrDesc}
-              style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
-              tabIndex={exportOpen ? 0 : -1}
-            >
-              📝 PR Description
+            <button id="prDescBtn" className="btn btn-ghost" onClick={handlePrDesc} style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }} tabIndex={exportOpen ? 0 : -1}>
+              📝 Copy as PR Description
             </button>
           </div>
         </div>
 
-        <button id="rerunBtn" className="btn btn-ghost" onClick={() => onRerun?.()} title="Pre-fill the generator form with this pack's goal and context">
+        {/* ── Tier 1: Re-run (hidden on mobile via CSS) ── */}
+        <button
+          id="rerunBtn"
+          className="btn btn-ghost action-rerun-desktop"
+          onClick={() => onRerun?.()}
+          title="Pre-fill the generator form with this pack's goal and context"
+        >
           ↻ Re-run
         </button>
-        <button id="duplicateBtn" className="btn btn-ghost" onClick={handleDuplicate} title="Create a copy of this intent pack">
-          ⧉ Duplicate
-        </button>
-        <button id="starBtn" className="btn btn-warning" onClick={toggleStar} title={pack.starred ? 'Remove star' : 'Star this pack for quick access'}>
-          {pack.starred ? '★ Unstar' : '☆ Star'}
-        </button>
-        <button id="archiveBtn" className="btn btn-ghost" onClick={toggleArchive} title={pack.archived ? 'Restore this pack from the archive' : 'Archive this pack (hide from default list)'}>
-          {pack.archived ? '↩ Unarchive' : '⊙ Archive'}
-        </button>
 
-        {/* Delete with inline confirmation */}
-        <button id="deleteBtn" className="btn btn-danger" onClick={handleDelete} title="Delete this pack permanently">
-          {deleteConfirm ? '⚠ Confirm delete?' : 'Delete'}
-        </button>
-        {deleteConfirm && (
-          <button id="cancelDeleteBtn" className="btn btn-ghost" onClick={() => setDeleteConfirm(false)} style={{ fontSize: '0.78rem' }}>
-            Cancel
+        {/* ── Tier 2: More actions overflow menu ── */}
+        <div ref={moreRef} style={{ position: 'relative', zIndex: 10 }}>
+          <button
+            id="moreActionsBtn"
+            className="btn btn-ghost"
+            onClick={() => { setMoreOpen(o => !o); setExportOpen(false); }}
+            title="More actions"
+          >
+            More {moreOpen ? '▲' : '▾'}
           </button>
-        )}
+
+          {moreOpen && (
+            <div className="action-overflow-menu" style={{ zIndex: 200 }}>
+              {/* Re-run inside overflow on mobile */}
+              <button
+                id="rerunBtnMobile"
+                className="btn btn-ghost action-rerun-mobile"
+                onClick={() => { setMoreOpen(false); onRerun?.(); }}
+                style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              >
+                ↻ Re-run
+              </button>
+              <button
+                id="duplicateBtn"
+                className="btn btn-ghost"
+                onClick={handleDuplicate}
+                style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              >
+                ⧉ Duplicate
+              </button>
+              <button
+                id="starBtn"
+                className="btn btn-warning"
+                onClick={toggleStar}
+                style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              >
+                {pack.starred ? '★ Unstar' : '☆ Star'}
+              </button>
+              <button
+                id="archiveBtn"
+                className="btn btn-ghost"
+                onClick={toggleArchive}
+                style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              >
+                {pack.archived ? '↩ Unarchive' : '⊙ Archive'}
+              </button>
+
+              <div style={{ height: '1px', background: 'var(--border)', margin: '2px 0' }} />
+
+              {/* Delete with two-step confirmation */}
+              <button
+                id="deleteBtn"
+                className="btn btn-danger"
+                onClick={handleDelete}
+                style={{ justifyContent: 'flex-start', fontSize: '0.8rem' }}
+              >
+                {deleteConfirm ? '⚠ Confirm delete?' : '🗑 Delete'}
+              </button>
+              {deleteConfirm && (
+                <button
+                  id="cancelDeleteBtn"
+                  className="btn btn-ghost"
+                  onClick={() => setDeleteConfirm(false)}
+                  style={{ justifyContent: 'flex-start', fontSize: '0.75rem' }}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {exportStatus && (

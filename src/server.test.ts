@@ -1255,7 +1255,7 @@ test("POST /api/intent-packs/:id/create-github-issue returns 400 when owner is m
       }
     );
     assert.equal(status, 400);
-    assert.match((body as Record<string, string>)["error"], /owner/);
+    assert.match(((body as Record<string, string>)["error"]) || "", /owner/);
   });
 });
 
@@ -1273,7 +1273,7 @@ test("POST /api/intent-packs/:id/create-github-issue returns 400 when repo is mi
       }
     );
     assert.equal(status, 400);
-    assert.match((body as Record<string, string>)["error"], /repo/);
+    assert.match((body as Record<string, string>)["error"] || "", /repo/);
   });
 });
 
@@ -1295,7 +1295,7 @@ test("POST /api/intent-packs/:id/create-github-issue returns 400 when token is n
         }
       );
       assert.equal(status, 400);
-      assert.match((body as Record<string, string>)["error"], /token/i);
+      assert.match((body as Record<string, string>)["error"] || "", /token/i);
     } finally {
       if (savedToken !== undefined) process.env.GITHUB_TOKEN = savedToken;
     }

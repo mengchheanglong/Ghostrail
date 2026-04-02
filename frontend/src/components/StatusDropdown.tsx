@@ -1,3 +1,5 @@
+import { Tooltip } from './Tooltip';
+
 const STATUSES = [
   { value: 'draft',       label: 'Draft',       badge: 'badge-muted'   },
   { value: 'approved',    label: 'Approved',    badge: 'badge-green'   },
@@ -17,7 +19,9 @@ export function StatusDropdown({
 
   return (
     <div id="statusRow" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-      <span className="field-label">Status</span>
+      <Tooltip content="Draft (planning), Approved (ready), In Progress (agent working), Done (complete), Blocked (needs help), Abandoned." position="top">
+        <span className="field-label" style={{ cursor: 'help', borderBottom: '1px dotted rgba(255,255,255,0.3)' }}>Status</span>
+      </Tooltip>
       <span className={`badge ${current.badge}`}>{current.label}</span>
       <select
         id="statusSelect"

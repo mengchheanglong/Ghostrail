@@ -4,6 +4,7 @@ import {
   HeuristicProvider,
   StubLlmProvider,
   OpenAiProvider,
+  GroqProvider,
   createProvider,
 } from "./core/llmProvider.js";
 import type { LlmProviderConfig } from "./core/llmProvider.js";
@@ -268,4 +269,46 @@ test("createProvider openai produces reasoningMode llm via mock fetch", async ()
   const provider = new OpenAiProvider("test-key", "gpt-4o", mockFetch);
   const pack = await provider.generate(sampleInput);
   assert.equal(pack.reasoningMode, "llm");
+});
+
+// ── GroqProvider ─────────────────────────────────────────────────────────────
+
+test("GroqProvider.generate requests max_completion_tokens below 8000 by default", async () => {
+  let capturedBody: Record<string, unknown> = {};
+  const captureFetch: typeof fetch = async (_url, init) => {
+    capturedBody = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    return new Response(JSON.stringify(validOpenAiResponse), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const provider = new GroqProvider("test-key", "openai/gpt-oss-120b", captureFetch);
+  await provider.generate(sampleInput);
+
+  const maxTokens = Number(capturedBody["max_completion_tokens"]);
+  assert.ok(maxTokens > 0, "max_completion_tokens should be positive");
+  assert.ok(maxTokens < 8000, "max_completion_tokens must stay below 8000");
+});
+
+test("GroqProvider.generate clamps configured max_completion_tokens to below 8000", async () => {
+  let capturedBody: Record<string, unknown> = {};
+  const captureFetch: typeof fetch = async (_url, init) => {
+    capturedBody = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    return new Response(JSON.stringify(validOpenAiResponse), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const provider = new GroqProvider("test-key", "openai/gpt-oss-120b", captureFetch, 9999);
+  await provider.generate(sampleInput);
+
+  const maxTokens = Number(capturedBody["max_completion_tokens"]);
+  assert.ok(maxTokens < 8000, "clamped max_completion_tokens must stay below 8000");
+});
+
+test("createProvider({ type: groq }) returns GroqProvider instance", () => {
+  const provider = createProvider({ type: "groq", apiKey: "test-key" });
+  assert.ok(provider instanceof GroqProvider);
 });

@@ -79,8 +79,8 @@ test("selecting Approved with unacknowledged warnings reverts the dropdown and s
     // The dropdown should revert to draft (or whatever the current status is)
     await expect(page.locator("#statusSelect")).toHaveValue("draft");
 
-    // An error message about acknowledgement should appear
-    await expect(page.locator("#exportStatus")).toContainText("Acknowledge policy warnings");
+    // An error message about acknowledgement should appear (rendered below StatusDropdown)
+    await expect(page.locator(".alert-warning").first()).toContainText("Acknowledge");
   } finally {
     await srv.close();
   }
